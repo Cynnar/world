@@ -1,1 +1,0 @@
-ALTER TABLE `raw_conversations` DROP INDEX `NewIndex`, ADD UNIQUE `NewIndex` (spawn_name, `sound_file`, `chat_text`(200));
