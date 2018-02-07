@@ -20,6 +20,7 @@ For creating a private server
 4. Push to the branch: `git push origin my-new-feature`
 5. Submit a pull request :D
 
-## Credits
 
-TODO: Write credits
+## Credit
+
+If you want credit for your code, note it will a comment in the source as well as the commit message.
