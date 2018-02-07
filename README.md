@@ -1,5 +1,5 @@
 # EQ2Emulator Server Source Code
-Source xode used by EQ2Emulator.net
+Source code used by EQ2Emulator.net
 
 ## Required
 TODO: Add requirements
@@ -14,7 +14,7 @@ For creating a private server
 
 ## Contributing
 
-Use the dev branch.
+TODO
 
 
 
