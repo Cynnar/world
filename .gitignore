@@ -1,0 +1,12 @@
+.svn
+
+.vs
+*.pdb
+*.sdf
+*.suo
+*.user
+*.o
+
+win/VC10Projects/EQ2World__*/
+win/worldserver
+bin
