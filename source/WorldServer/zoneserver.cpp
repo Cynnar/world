@@ -1710,7 +1710,7 @@ void ZoneServer::SendSpawnChanges(int32 spawn_id, Client* client, bool override_
 }
 
 void ZoneServer::SendSpawnChanges(Spawn* spawn, Client* client, bool override_changes, bool override_vis_changes){
-	if(client && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) <REMOVE_SPAWN_DISTANCE){
+	if(client && client->ready_for_updates && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) <REMOVE_SPAWN_DISTANCE){
 		EQ2Packet* outapp = spawn->spawn_update_packet(client->GetPlayer(), client->GetVersion(), override_changes, override_vis_changes);
 		if(outapp)
 			client->QueuePacket(outapp);
@@ -4631,17 +4631,63 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 	//packet->setDataByName("unknown3", 3815767999, 1);			// Screenshots disabled with this value
 	//packet->setDataByName("unknown3", 1, 2);
 
-	if (client->GetVersion() <= 63181){
-		packet->setDataByName("unknown3", 872447025,0);//63181 
-		packet->setDataByName("unknown3", 3085434875,1);// 63181 
-		packet->setDataByName("unknown3", 2147483633,2);// 63181 
+	if (client->GetVersion() >= 63587) {
+		packet->setArrayLengthByName("num_exp_feature_bytes", 9);
+		packet->setArrayDataByName("exp_feature_bytes", 95, 0);//kos and dof
+		packet->setArrayDataByName("exp_feature_bytes", 255, 1);//eof rok tso sf dov coe tov
+		packet->setArrayDataByName("exp_feature_bytes", 247, 2);//aom tot ka exp14
+		packet->setArrayDataByName("exp_feature_bytes", 32, 3);//rum cellar
+		packet->setArrayDataByName("exp_feature_bytes", 140, 4);
+		packet->setArrayDataByName("exp_feature_bytes", 62, 5);
+		packet->setArrayDataByName("exp_feature_bytes", 0, 6);
+		packet->setArrayDataByName("exp_feature_bytes", 45, 7);
+		packet->setArrayDataByName("exp_feature_bytes", 128, 8);
+
+		packet->setArrayLengthByName("num_unknown3b_bytes", 9);
+		packet->setArrayDataByName("unknown3b_bytes", 95, 0);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 1);
+		packet->setArrayDataByName("unknown3b_bytes", 247, 2);
+		packet->setArrayDataByName("unknown3b_bytes", 237, 3);
+		packet->setArrayDataByName("unknown3b_bytes", 143, 4);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 5);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 6);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 7);
+		packet->setArrayDataByName("unknown3b_bytes", 128, 8);
 	}
-	else{
+	else if (client->GetVersion() >= 63214) {
+		packet->setArrayLengthByName("num_exp_feature_bytes", 9);
+		packet->setArrayDataByName("exp_feature_bytes", 95, 0);//kos and dof
+		packet->setArrayDataByName("exp_feature_bytes", 255, 1);//eof rok tso sf dov coe tov
+		packet->setArrayDataByName("exp_feature_bytes", 247, 2);//aom tot ka exp14
+		packet->setArrayDataByName("exp_feature_bytes", 32, 3);//rum cellar
+		packet->setArrayDataByName("exp_feature_bytes", 140, 4);
+		packet->setArrayDataByName("exp_feature_bytes", 62, 5);
+		packet->setArrayDataByName("exp_feature_bytes", 0, 6);
+		packet->setArrayDataByName("exp_feature_bytes", 45, 7);
+		packet->setArrayDataByName("exp_feature_bytes", 128, 8);
+
+		packet->setArrayLengthByName("num_unknown3b_bytes", 9);
+		packet->setArrayDataByName("unknown3b_bytes", 95, 0);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 1);
+		packet->setArrayDataByName("unknown3b_bytes", 247, 2);
+		packet->setArrayDataByName("unknown3b_bytes", 237, 3);
+		packet->setArrayDataByName("unknown3b_bytes", 143, 4);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 5);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 6);
+		packet->setArrayDataByName("unknown3b_bytes", 255, 7);
+		packet->setArrayDataByName("unknown3b_bytes", 128, 8);
+	}
+	else if (client->GetVersion() >= 63181) {
 		packet->setDataByName("unknown3a", 750796556);//63182 73821356
 		packet->setDataByName("unknown3b", 3991404383);// 63182 3991404383
 		packet->setDataByName("unknown3c", 4278189967);// 63182 4278189967
 		packet->setDataByName("unknown2a", 8);// 63182
 		packet->setDataByName("unknown2b", 8);// 63182
+	}
+	else{
+		packet->setDataByName("unknown3", 872447025,0);//63181 
+		packet->setDataByName("unknown3", 3085434875,1);// 63181 
+		packet->setDataByName("unknown3", 2147483633,2);// 63181 
 	}
 	
 	packet->setDataByName("year", world.GetWorldTimeStruct()->year);

@@ -145,6 +145,7 @@ public:
 	bool	IsConnected(){ return connected; }
 	bool	IsReadyForSpawns(){ return ready_for_spawns; }
 	bool	IsZoning(){ return client_zoning; }
+	bool	ready_for_updates;
 	void	SetReadyForSpawns(bool val);
 	void	QueuePacket(EQ2Packet* app);
 	void	SendLoginInfo();
@@ -186,6 +187,8 @@ public:
 	void	SetBanker(Spawn* in_banker);
 	bool	AddItem(int32 item_id, int8 quantity = 0);
 	bool	AddItem(Item* item);
+	bool	AddItemToBank(int32 item_id, int8 quantity = 0);
+	bool	AddItemToBank(Item* item);
 	bool	RemoveItem(Item *item, int8 quantity);
 	void	ProcessTeleport(Spawn* spawn, vector<TransportDestination*>* destinations, int32 transport_id = 0);
 	void	ProcessTeleportLocation(EQApplicationPacket* app); 

@@ -154,6 +154,7 @@ Client::Client(EQStream* ieqs) : pos_update(200), quest_pos_timer(2000), lua_deb
 	combine_spawn = 0;
 	lua_debug = false;
 	ready_for_spawns = false;
+	ready_for_updates = false;
 	lua_debug_timer.Disable();
 	transport_spawn = 0;
 	MBuyBack.SetName("Client::MBuyBack");
@@ -850,7 +851,7 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 				// test the original location of Version for clients older than 1212
 				version = request->getType_int16_ByName("version");
 
-				if (EQOpcodeManager.count(GetOpcodeVersion(version)) == 0) {
+				if (version >= 1212 || EQOpcodeManager.count(GetOpcodeVersion(version)) == 0) {
 					// must be new client data version method, re-fetch the packet
 					safe_delete(request);
 					request = configReader.getStruct("LoginByNumRequest", 1212);
@@ -937,6 +938,10 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 				}
 			}
 			safe_delete(request);
+			break;
+		}
+		case OP_SysClient: {
+			ready_for_updates = true;
 			break;
 		}
 		case OP_MapRequest:{
@@ -4938,6 +4943,52 @@ bool Client::AddItem(Item* item){
 	return true;
 }
 
+bool Client::AddItemToBank(int32 item_id, int8 quantity) {
+	Item* master_item = master_item_list.GetItem(item_id);
+	Item* item = 0;
+	if (master_item)
+		item = new Item(master_item);
+	if (item) {
+		if (quantity > 0)
+			item->details.count = quantity;
+		return AddItemToBank(item);
+	}
+	else
+		Message(CHANNEL_COLOR_RED, "Could not find item with id of: %i", item_id);
+
+	return false;
+}
+bool Client::AddItemToBank(Item* item) {
+	if (!item) {
+		return false;
+	}
+	if (item->IsBag())
+		item->details.bag_id = item->details.unique_id;
+	if (player->AddItemToBank(item)) {
+		EQ2Packet* outapp = player->SendInventoryUpdate(GetVersion());
+		if (outapp) {
+			QueuePacket(outapp);
+			//resend bag desc with new item name added	
+			outapp = player->SendBagUpdate(item->details.inv_slot_id, GetVersion());
+			if (outapp)
+				QueuePacket(outapp);
+			/*EQ2Packet* app = item->serialize(client->GetVersion(), false);
+			DumpPacket(app);
+			client->QueuePacket(app);
+			*/
+		}
+		CheckPlayerQuestsItemUpdate(item);
+		if (item->GetItemScript() && lua_interface)
+			lua_interface->RunItemScript(item->GetItemScript(), "obtained", item, player);
+	}
+	else {
+		SimpleMessage(CHANNEL_COLOR_RED, "Could not find free slot to place item.");
+		safe_delete(item);
+		return false;
+	}
+
+	return true;
+}
 bool Client::RemoveItem(Item *item, int8 quantity) {
 	EQ2Packet *outapp;
 	bool delete_item = false;
