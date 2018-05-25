@@ -478,12 +478,12 @@ bool Commands::SetSpawnCommand(Client* client, Spawn* target, int8 type, const c
 		switch(type){
 			case SPAWN_SET_VALUE_NAME:{
 				target->SetName(value);
-				target->GetZone()->SendUpdateTitles(target);
+				client->GetCurrentZone()->SendUpdateTitles(target);
 				break;
 									  }
 			case SPAWN_SET_VALUE_SUB_TITLE: {
 				target->SetSubTitle(value);
-				target->GetZone()->SendUpdateTitles(target);
+				client->GetCurrentZone()->SendUpdateTitles(target);
 				break;
 											}
 			case SPAWN_SET_VALUE_X_OFFSET: 
@@ -1359,14 +1359,26 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 					LogWrite(COMMAND__ERROR, 0, "Command", "Unknown unique item ID: %s", sep->arg[0]);
 			}
 			break;
-										 }
-		case COMMAND_SUMMONITEM:{
-			if(sep && sep->arg[0][0] && sep->IsNumber(0)){
+		}
+		case COMMAND_SUMMONITEM: {
+			if (sep && sep->IsNumber(0)) {
 				int32 item_id = atol(sep->arg[0]);
-				client->AddItem(item_id);
+				int32 quantity = 1;
+				
+				if (sep->arg[1] && sep->IsNumber(1))
+					quantity = atoi(sep->arg[1]);
+				
+				if (sep->arg[2] && strncasecmp(sep->arg[2], "bank", 4) == 0) {
+					client->AddItemToBank(item_id,quantity);
+				}
+				else {
+					client->AddItem(item_id, quantity);
+				}
 			}
-			else
-				client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Usage: /summonitem {item_id}");
+			else {
+				client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Usage: /summonitem {item_id} [quantity] or");
+				client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Usage: /summonitem {item_id} {quantity} [location] where location = bank");
+			}
 			break;
 		}
 		case COMMAND_COLLECTION_ADDITEM: {
@@ -1703,10 +1715,7 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 							}
 		case COMMAND_CLASS:{
 			if(sep && sep->arg[ndx][0]){
-				client->GetPlayer()->GetInfoStruct()->class1 = atoi(sep->arg[ndx]);
-				client->GetPlayer()->GetInfoStruct()->class2 = atoi(sep->arg[ndx]);
-				client->GetPlayer()->GetInfoStruct()->class3 = atoi(sep->arg[ndx]);
-				client->GetPlayer()->SetCharSheetChanged(true);
+				client->GetPlayer()->SetPlayerAdventureClass(atoi(sep->arg[ndx]));
 				client->UpdateTimeStampFlag ( CLASS_UPDATE_FLAG );
 			}else
 				client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Usage:  /class {class_id}");
@@ -4891,6 +4900,30 @@ void Commands::Command_Inventory(Client* client, Seperator* sep, EQ2_RemoteComma
 				client->QueuePacket(characterSheetPackets);
 			}
 		}
+		else if (sep->arg[1][0] && strncasecmp("unpack", sep->arg[0], 6) == 0 && sep->IsNumber(1))
+		{
+			if (client->GetPlayer()->EngagedInCombat())
+				client->SimpleMessage(CHANNEL_COLOR_RED, "You may not unpack items while in combat.");
+			else {
+				int16 index = atoi(sep->arg[1]);
+				Item* item = client->GetPlayer()->item_list.GetItemFromIndex(index);
+				if (item) {
+					//	client->GetPlayer()->item_list.DestroyItem(index);
+					if (item->item_sets.size() > 0) {
+						for (int32 i = 0; i < item->item_sets.size(); i++) {
+							ItemSet* set = item->item_sets[i];
+							if (set->item_stack_size == 0)
+								set->item_stack_size += 1;
+							client->AddItem(set->item_id, set->item_stack_size);
+						}
+					}
+
+				}
+				client->RemoveItem(item, 1);
+
+			}
+
+		}
 		else if(sep->arg[1][0] && strncasecmp("unequip", sep->arg[0], 7) == 0 && sep->IsNumber(1))
 		{
 			if(client->GetPlayer()->EngagedInCombat())
@@ -5194,6 +5227,21 @@ void Commands::Command_LastName(Client* client, Seperator* sep)
 			return;
 		}
 		client->RemovePendingLastName();
+
+		uchar* checkname = (uchar*)sep->arg[0];
+		bool valid_name = true;
+		for (int32 i = 0; i < strlen(sep->arg[0]); i++) {
+			if (!alpha_check(checkname[i])) {
+				valid_name = false;
+				break;
+			}
+		}
+
+		if (!valid_name) {
+			client->Message(CHANNEL_COLOR_YELLOW, "Your last name can only contain letters.", rule_manager.GetGlobalRule(R_Player, MinLastNameLevel)->GetInt8());
+			return;
+		}
+
 		string last_name = (string)sep->arg[0];
 		int8 max_length = rule_manager.GetGlobalRule(R_Player, MaxLastNameLength)->GetInt8();
 		int8 min_length = rule_manager.GetGlobalRule(R_Player, MinLastNameLength)->GetInt8();
@@ -5619,15 +5667,19 @@ void Commands::Command_ModifyCharacter(Client* client, Seperator* sep)
 
 			else
 			{
-				client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify character [action] [field] [value]");
-				client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: add, remove");
-				client->SimpleMessage(CHANNEL_COLOR_RED, "Value  : copper, silver, gold, plat");
 				client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify character remove gold 15");
+				
 			}
 		}
 	}
 	else
-		Command_Modify(client);
+	{
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify character [action] [field] [value]");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: add, remove");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Value  : copper, silver, gold, plat");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify character remove gold 15");
+	}
+		
 }
 
 
@@ -5764,15 +5816,18 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 
 		else
 		{
-			client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify quest [action] [quest id]");
-			client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: list, completed, remove");
-			client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest list");
-			client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest remove 156");
+			Command_Modify(client);
 		}
 	}
 
 	else
-		Command_Modify(client);
+	{
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify quest [action] [quest id]");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: list, completed, remove");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest list");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest remove 156");
+	}
+		
 }
 
 

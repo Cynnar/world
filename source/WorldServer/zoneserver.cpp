@@ -1710,7 +1710,7 @@ void ZoneServer::SendSpawnChanges(int32 spawn_id, Client* client, bool override_
 }
 
 void ZoneServer::SendSpawnChanges(Spawn* spawn, Client* client, bool override_changes, bool override_vis_changes){
-	if(client && client->ready_for_updates && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) <REMOVE_SPAWN_DISTANCE){
+	if(client && client->IsReadyForUpdates() && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) <REMOVE_SPAWN_DISTANCE){
 		EQ2Packet* outapp = spawn->spawn_update_packet(client->GetPlayer(), client->GetVersion(), override_changes, override_vis_changes);
 		if(outapp)
 			client->QueuePacket(outapp);
@@ -4631,7 +4631,7 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 	//packet->setDataByName("unknown3", 3815767999, 1);			// Screenshots disabled with this value
 	//packet->setDataByName("unknown3", 1, 2);
 
-	if (client->GetVersion() >= 63587) {
+	/*if (client->GetVersion() >= 63587) {
 		packet->setArrayLengthByName("num_exp_feature_bytes", 9);
 		packet->setArrayDataByName("exp_feature_bytes", 95, 0);//kos and dof
 		packet->setArrayDataByName("exp_feature_bytes", 255, 1);//eof rok tso sf dov coe tov
@@ -4676,6 +4676,13 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 		packet->setArrayDataByName("unknown3b_bytes", 255, 6);
 		packet->setArrayDataByName("unknown3b_bytes", 255, 7);
 		packet->setArrayDataByName("unknown3b_bytes", 128, 8);
+	}*/
+	if (client->GetVersion() >= 64644) {
+		packet->setDataByName("unknown3a", 12598924);
+		packet->setDataByName("unknown3b", 3992452959);
+		packet->setDataByName("unknown3c", 4294967183);
+		packet->setDataByName("unknown2a", 9);
+		packet->setDataByName("unknown2b", 9);
 	}
 	else if (client->GetVersion() >= 63181) {
 		packet->setDataByName("unknown3a", 750796556);//63182 73821356

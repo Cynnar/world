@@ -397,21 +397,24 @@ void SPGrid::AddSpawn(Spawn * spawn, Cell * cell) {
 }
 
 void SPGrid::RemoveSpawnFromCell(Spawn * spawn) {
-	vector<Spawn*>& spawns = spawn->Cell_Info.CurrentCell->SpawnList;
+	if (spawn->Cell_Info.CurrentCell) {
 
-	// Only do the vector swap if the vector has more than 1 spawn in it
-	if (spawns.size() > 1) {
-		// Swap the last spawn in this list to our position and update its stored index to match its new index
-		spawns[spawn->Cell_Info.CellListIndex] = spawns.back();
-		spawns[spawn->Cell_Info.CellListIndex]->Cell_Info.CellListIndex = spawn->Cell_Info.CellListIndex;
+		vector<Spawn*>& spawns = spawn->Cell_Info.CurrentCell->SpawnList;
+
+		// Only do the vector swap if the vector has more than 1 spawn in it
+		if (spawns.size() > 1) {
+			// Swap the last spawn in this list to our position and update its stored index to match its new index
+			spawns[spawn->Cell_Info.CellListIndex] = spawns.back();
+			spawns[spawn->Cell_Info.CellListIndex]->Cell_Info.CellListIndex = spawn->Cell_Info.CellListIndex;
+		}
+
+		// Remove the last spawn from the list which should now be the spawn passed as a parameter
+		spawns.pop_back();
+
+		// Reset the spawns CellInfo to default values now that it is no longer in a cell
+		spawn->Cell_Info.CellListIndex = -1;
+		spawn->Cell_Info.CurrentCell = nullptr;
 	}
-
-	// Remove the last spawn from the list which should now be the spawn passed as a parameter
-	spawns.pop_back();
-
-	// Reset the spawns CellInfo to default values now that it is no longer in a cell
-	spawn->Cell_Info.CellListIndex = -1;
-	spawn->Cell_Info.CurrentCell = nullptr;
 }
 
 /**********************************************************************
