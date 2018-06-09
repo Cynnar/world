@@ -286,6 +286,7 @@ void ZoneServer::Init()
 	MSpawnScriptTimers.SetName("ZoneServer::spawn_script_timers");
 	MRemoveSpawnScriptTimersList.SetName("ZoneServer::remove_spawn_script_timers_list");
 	MClientList.SetName("ZoneServer::clients");
+	MWidgetTimers.SetName("ZoneServer::widget_timers");
 #ifdef WIN32
 	_beginthread(ZoneLoop, 0, this);
 	_beginthread(SpawnLoop, 0, this);
@@ -541,10 +542,13 @@ void ZoneServer::DeleteData(bool boot_clients){
 	// Clear lists
 	heading_timers.clear();
 	movement_spawns.clear();
-	widget_timers.clear();
 	respawn_timers.clear();
 	transport_spawns.clear();
 	quick_database_id_lookup.clear();
+
+	MWidgetTimers.writelock(__FUNCTION__, __LINE__);
+	widget_timers.clear();
+	MWidgetTimers.releasewritelock(__FUNCTION__, __LINE__);
 
 	map<int16, PacketStruct*>::iterator struct_itr;
 	for (struct_itr = versioned_info_structs.begin(); struct_itr != versioned_info_structs.end(); struct_itr++)
@@ -1710,7 +1714,7 @@ void ZoneServer::SendSpawnChanges(int32 spawn_id, Client* client, bool override_
 }
 
 void ZoneServer::SendSpawnChanges(Spawn* spawn, Client* client, bool override_changes, bool override_vis_changes){
-	if(client && client->IsReadyForUpdates() && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) <REMOVE_SPAWN_DISTANCE){
+	if(client && client->IsReadyForUpdates() && client->GetPlayer()->WasSentSpawn(spawn->GetID()) && !client->GetPlayer()->WasSpawnRemoved(spawn) && client->GetPlayer()->GetDistance(spawn) < REMOVE_SPAWN_DISTANCE){
 		EQ2Packet* outapp = spawn->spawn_update_packet(client->GetPlayer(), client->GetVersion(), override_changes, override_vis_changes);
 		if(outapp)
 			client->QueuePacket(outapp);
@@ -2771,6 +2775,8 @@ void ZoneServer::AddSpawn(Spawn* spawn) {
 	if (Grid != nullptr) {
 		Grid->AddSpawn(spawn);
 	}
+
+	spawn->SetAddedToWorldTimestamp(Timer::GetCurrentTime2());
 }
 
 void ZoneServer::AddClient(Client* client){
@@ -3343,36 +3349,53 @@ bool ZoneServer::HasWidgetTimer(Spawn* widget){
 	bool ret = false;
 	if (widget) {
 		int32 id = widget->GetID();
-		MutexMap<int32, int32>::iterator itr = widget_timers.begin();
-		while(itr.Next()){
+		map<int32, int32>::iterator itr;
+		MWidgetTimers.readlock(__FUNCTION__, __LINE__);
+		for (itr = widget_timers.begin(); itr != widget_timers.end(); itr++) {
 			if(itr->first == id){
 				ret = true;
 				break;
 			}
 		}
+		MWidgetTimers.releasereadlock(__FUNCTION__, __LINE__);
 	}
 	return ret;
 }
 
 void ZoneServer::CheckWidgetTimers(){
 	vector<int32> remove_list;
-	MutexMap<int32, int32>::iterator itr = widget_timers.begin();
-	while(itr.Next()){
+	map<int32, int32>::iterator itr;
+
+	MWidgetTimers.readlock(__FUNCTION__, __LINE__);
+	for (itr = widget_timers.begin(); itr != widget_timers.end(); itr++) {
 		if(Timer::GetCurrentTime2() >= itr->second){
-			Spawn* widget = GetSpawnByID(itr->first);
+			/*Spawn* widget = GetSpawnByID(itr->first);
 			if (widget && widget->IsWidget())
-				((Widget*)widget)->HandleTimerUpdate();
+				((Widget*)widget)->HandleTimerUpdate();*/
 
 			remove_list.push_back(itr->first);
 		}
 	}
+	MWidgetTimers.releasereadlock(__FUNCTION__, __LINE__);
+
+	for (int32 i = 0; i < remove_list.size(); i++) {
+		Spawn* widget = GetSpawnByID(remove_list[i]);
+		if (widget && widget->IsWidget())
+			((Widget*)widget)->HandleTimerUpdate();
+	}
+
+	MWidgetTimers.writelock(__FUNCTION__, __LINE__);
 	for(int32 i=0;i<remove_list.size(); i++)
 		widget_timers.erase(remove_list[i]);
+	MWidgetTimers.releasewritelock(__FUNCTION__, __LINE__);
 }
 
-void ZoneServer::AddWidgetTimer(Spawn* widget, float time){
-	if(widget && widget->IsWidget())
-		widget_timers.Put(widget->GetID(), (int32)(time*1000) + Timer::GetCurrentTime2());
+void ZoneServer::AddWidgetTimer(Spawn* widget, float time) {
+	if (widget && widget->IsWidget()) {
+		MWidgetTimers.writelock(__FUNCTION__, __LINE__);
+		widget_timers[widget->GetID()] = ((int32)(time * 1000)) + Timer::GetCurrentTime2();
+		MWidgetTimers.releasewritelock(__FUNCTION__, __LINE__);
+	}
 }
 
 Spawn*	ZoneServer::GetSpawnGroup(int32 id){

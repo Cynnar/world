@@ -70,7 +70,7 @@ int32 Widget::GetWidgetID(){
 }
 
 EQ2Packet* Widget::serialize(Player* player, int16 version){
-	opcode = EQOpcodeManager[GetOpcodeVersion(version)]->EmuToEQ(OP_EqCreateSignWidgetCmd);
+	opcode = EQOpcodeManager[GetOpcodeVersion(version)]->EmuToEQ(OP_EqCreateWidgetCmd);
 	return spawn_serialize(player, version);
 }
 
@@ -240,7 +240,7 @@ void Widget::SetCloseSound(const char* name){
 }
 
 void Widget::HandleTimerUpdate(){
-	if(GetOpenX() != 0 || GetOpenY() != 0 || GetOpenZ() != 0)
+	if(widget_type == WIDGET_TYPE_LIFT)
 		return; //This Widget is a lift, return.
 	else if (widget_type == WIDGET_TYPE_DOOR && is_open)
 		HandleUse(0, "");
@@ -252,8 +252,7 @@ void Widget::OpenDoor(){
 	float openX = GetOpenX();
 	float openY = GetOpenY();
 	float openZ = GetOpenZ();
-	if(openX != 0 || openY != 0 || openZ != 0 ){
-		//This door is a lift, calculate coords and add movement location
+	if(openX != 0 || openY != 0 || openZ != 0 ) {
 		float x = GetX();
 		float y = GetY();
 		float z = GetZ();
@@ -272,50 +271,48 @@ void Widget::OpenDoor(){
 			diff*=-1;
 		GetZone()->AddWidgetTimer(this, diff / 4);
 	}
-	else
+	if (widget_type != WIDGET_TYPE_LIFT)
 		SetActivityStatus(0);
 	is_open = true;
 	if(open_duration > 0)
 		GetZone()->AddWidgetTimer(this, open_duration);
 }
+
 void Widget::CloseDoor(){
 	if(GetClosedHeading() > 0)
 		SetHeading(GetClosedHeading());
 	else if(GetOpenHeading() >= 0)
 		SetHeading(GetSpawnOrigHeading());
 
-	//If door is not a lift, return
-	if(GetCloseX() == 0 && GetCloseY() == 0 && GetCloseZ() == 0 && GetOpenX() == 0 && GetOpenY() == 0 && GetOpenZ() == 0){
+	if (widget_type != WIDGET_TYPE_LIFT)
 		SetActivityStatus(64);
-		is_open = false;
-		return;
+
+	if (GetCloseX() != 0 || GetCloseY() != 0 || GetCloseZ() != 0 || GetOpenX() != 0 || GetOpenY() != 0 || GetOpenZ() != 0) {
+		float x = GetSpawnOrigX();
+		float y = GetSpawnOrigY();
+		float z = GetSpawnOrigZ();
+
+		if (GetCloseX() != 0)
+			x = GetCloseX();
+		if (GetCloseY() != 0)
+			y = GetCloseY();
+		if (GetCloseZ() != 0)
+			z = GetCloseZ();
+
+		AddRunningLocation(x, y, z, 4);
+
+		float diff = GetDistance(GetX(), GetY(), GetZ(), x, y, z);
+
+		if (diff < 0)
+			diff *= -1;
+		GetZone()->AddWidgetTimer(this, diff / 4);
 	}
-
-	//This door is a lift
-	float x = GetSpawnOrigX();
-	float y = GetSpawnOrigY();
-	float z = GetSpawnOrigZ();
-
-	if(GetCloseX() != 0)
-		x = GetCloseX();
-	if(GetCloseY() != 0)
-		y = GetCloseY();
-	if(GetCloseZ() != 0)
-		z = GetCloseZ();
-	
-	AddRunningLocation(x, y, z, 4);
-
-	float diff = GetDistance(GetX(), GetY(), GetZ(), x, y, z);
-
-	if(diff < 0)
-		diff*=-1;
-	GetZone()->AddWidgetTimer(this, diff / 4);
 
 	is_open = false;
 }
 
 void Widget::ProcessUse(){
-	if((GetOpenY() != 0 || GetOpenX() != 0 || GetOpenZ() != 0) && GetZone()->HasWidgetTimer(this)) //this door is a lift and in use, wait until it gets to the 
+	if(widget_type == WIDGET_TYPE_LIFT && GetZone()->HasWidgetTimer(this)) //this door is a lift and in use, wait until it gets to the 
 		return;
 	if(is_open) //close
 		CloseDoor();
@@ -346,7 +343,7 @@ void Widget::HandleUse(Client* client, string command){
 		destinations = GetZone()->GetTransporters(GetTransporterID());
 	if (destinations)
 		client->ProcessTeleport(this, destinations, GetTransporterID());
-	else if (widget_type == WIDGET_TYPE_DOOR){
+	else if (widget_type == WIDGET_TYPE_DOOR || widget_type == WIDGET_TYPE_LIFT){
 		Widget* widget = this;
 		if (!action_spawn && action_spawn_id > 0){
 			Spawn* spawn = GetZone()->GetSpawnByDatabaseID(action_spawn_id);

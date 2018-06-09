@@ -715,12 +715,13 @@ int EQ2Emu_lua_MoveToLocation(lua_State* state){
 	float z = lua_interface->GetFloatValue(state, 4);
 	float speed = lua_interface->GetFloatValue(state, 5);
 	string lua_function = lua_interface->GetStringValue(state, 6);
+	bool more_points = lua_interface->GetBooleanValue(state, 7);
 
 	if(spawn) {
 		if (speed == 0)
 			speed = spawn->GetSpeed();
 
-		spawn->AddRunningLocation(x, y, z, speed, 0.0f, true, true, lua_function);
+		spawn->AddRunningLocation(x, y, z, speed, 0.0f, true, !more_points, lua_function);
 	}
 	lua_interface->ResetFunctionStack(state);
 	return 0;
@@ -862,10 +863,16 @@ int EQ2Emu_lua_SummonItem(lua_State* state){
 	Spawn* spawn = lua_interface->GetSpawn(state);
 	int32 item_id = lua_interface->GetInt32Value(state, 2);
 	bool send_messages = (lua_interface->GetInt8Value(state, 3) == 1);
+	string location = lua_interface->GetStringValue(state, 4);
+	
+
 	if (spawn && spawn->IsPlayer()){
 		Client* client = spawn->GetZone()->GetClientBySpawn(spawn);
 		if (client && item_id > 0){
-			lua_interface->SetBooleanValue(state, client->AddItem(item_id, 1));
+			if (strncasecmp(location.c_str(), "bank", 4) == 0)
+				lua_interface->SetBooleanValue(state, client->AddItemToBank(item_id, 1));
+			else
+				lua_interface->SetBooleanValue(state, client->AddItem(item_id, 1));
 			if (send_messages) {
 				Item* item = master_item_list.GetItem(item_id);
 				if (item) {
@@ -8555,4 +8562,31 @@ int EQ2Emu_lua_SpawnGroupByID(lua_State* state){
 		lua_pushnil(state);
 
 	return 1;
+}
+
+int EQ2Emu_lua_SetSpawnAnimation(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state, 1);
+	int32 anim_id = lua_interface->GetInt32Value(state, 2);
+	int16 leeway = lua_interface->GetInt16Value(state, 3);
+
+	if (!spawn) {
+		lua_interface->LogError("LUA SetSpawnAnimation command error: spawn is not valid");
+		return 0;
+	}
+
+	if (anim_id == 0) {
+		lua_interface->LogError("LUA SetSpawnAnimation command error: anim_id is not valid");
+		return 0;
+	}
+
+	if (leeway == 0)
+		leeway = 5000;
+
+	spawn->SetSpawnAnim(anim_id);
+	spawn->SetSpawnAnimLeeway(leeway);
+
+	return 0;
 }

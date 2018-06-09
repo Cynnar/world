@@ -334,7 +334,7 @@ int32 SPGrid::GetGridID(Spawn * spawn) {
 	// Create the starting point for the trace
 	float point[3];
 	point[0] = spawn->GetX();
-	point[1] = spawn->GetY();
+	point[1] = spawn->GetY() + 3.0f; // Small bump to make sure we are above ground when we do the trace
 	point[2] = spawn->GetZ();
 
 	// Create the direction for the trace, as we want what

@@ -908,6 +908,14 @@ public:
 
 	CellInfo Cell_Info;
 
+
+	int32 GetSpawnAnim() { return m_spawnAnim; }
+	void SetSpawnAnim(int32 value) { m_spawnAnim = value; }
+	int32 GetAddedToWorldTimestamp() { return m_addedToWorldTimestamp; }
+	void SetAddedToWorldTimestamp(int32 value) { m_addedToWorldTimestamp = value; }
+	int16 GetSpawnAnimLeeway() { return m_spawnAnimLeeway; }
+	void SetSpawnAnimLeeway(int16 value) { m_spawnAnimLeeway = value; }
+	
 protected:
 	bool	send_spawn_changes;
 	bool	invulnerable;
@@ -974,6 +982,10 @@ private:
 	map<string, string>			m_tempVariables;
 
 	int16						m_illusionModel;
+
+	int32 m_spawnAnim;
+	int32 m_addedToWorldTimestamp;
+	int16 m_spawnAnimLeeway;
 
 	int16 pos_packet_size;
 	int16 info_packet_size;

@@ -393,4 +393,5 @@ int EQ2Emu_lua_SetPlayerLevel(lua_State* state);
 int EQ2Emu_lua_AddCoin(lua_State* state);
 int EQ2Emu_lua_RemoveCoin(lua_State* state);
 int EQ2Emu_lua_GetPlayersInZone(lua_State* state);
+int EQ2Emu_lua_SetSpawnAnimation(lua_State* state);
 #endif

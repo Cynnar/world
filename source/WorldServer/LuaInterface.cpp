@@ -948,6 +948,7 @@ void LuaInterface::RegisterFunctions(lua_State* state) {
 	lua_register(state, "RemoveCoin", EQ2Emu_lua_RemoveCoin);
 	lua_register(state, "GetPlayersInZone", EQ2Emu_lua_GetPlayersInZone);
 	lua_register(state, "SpawnGroupByID", EQ2Emu_lua_SpawnGroupByID);
+	lua_register(state, "SetSpawnAnimation", EQ2Emu_lua_SetSpawnAnimation);
 }
 
 void LuaInterface::LogError(const char* error, ...)  {

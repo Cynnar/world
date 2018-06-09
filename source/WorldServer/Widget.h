@@ -24,6 +24,7 @@
 using namespace std;
 #define WIDGET_TYPE_GENERIC	0
 #define WIDGET_TYPE_DOOR	1
+#define WIDGET_TYPE_LIFT	2
 class Widget : public Spawn{
 public:
 	Widget();

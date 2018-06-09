@@ -941,6 +941,8 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 			break;
 		}
 		case OP_SysClient: {
+			LogWrite(OPCODE__DEBUG, 1, "Opcode", "Opcode 0x%X (%i): OP_SysClient", opcode, opcode);
+			LogWrite(CCLIENT__DEBUG, 0, "Client", "Client '%s' (%u) is ready for spawn updates.", GetPlayer()->GetName(), GetPlayer()->GetCharacterID());
 			ready_for_updates = true;
 			break;
 		}
@@ -965,85 +967,77 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 			}
 			break;
 		}
-		case OP_RequestCampMsg:
-			{
-				LogWrite(OPCODE__DEBUG, 1, "Opcode", "Opcode 0x%X (%i): OP_RequestCampMsg", opcode, opcode);
+		case OP_RequestCampMsg: {
+			LogWrite(OPCODE__DEBUG, 1, "Opcode", "Opcode 0x%X (%i): OP_RequestCampMsg", opcode, opcode);
 
-				PacketStruct* request = configReader.getStruct("WS_RequestCamp",GetVersion());
-				if (request && request->LoadPacketData(app->pBuffer,app->size))
-				{
-					LogWrite(CCLIENT__DEBUG, 0, "CClient", "Client '%s' (%u) is camping...", GetPlayer()->GetName(), GetPlayer()->GetCharacterID());
-					LogWrite(CCLIENT__DEBUG, 0, "CClient", "WS_RequestCamp - quit: %i, camp_desktop: %i, camp_char_select: %i, (to) char_name: %s", 
-						request->getType_int8_ByName("quit"),
-						request->getType_int8_ByName("camp_desktop"),
-						request->getType_int16_ByName("camp_char_select"),
-						( request->getType_EQ2_16BitString_ByName("char_name").data.length() > 0 ) ? request->getType_EQ2_16BitString_ByName("char_name").data.c_str() : "");
+			PacketStruct* request = configReader.getStruct("WS_RequestCamp", GetVersion());
+			if (request && request->LoadPacketData(app->pBuffer, app->size)) {
+				LogWrite(CCLIENT__DEBUG, 0, "CClient", "Client '%s' (%u) is camping...", GetPlayer()->GetName(), GetPlayer()->GetCharacterID());
+				LogWrite(CCLIENT__DEBUG, 0, "CClient", "WS_RequestCamp - quit: %i, camp_desktop: %i, camp_char_select: %i, (to) char_name: %s",
+					request->getType_int8_ByName("quit"),
+					request->getType_int8_ByName("camp_desktop"),
+					request->getType_int16_ByName("camp_char_select"),
+					(request->getType_EQ2_16BitString_ByName("char_name").data.length() > 0) ? request->getType_EQ2_16BitString_ByName("char_name").data.c_str() : "");
 
-					//DumpPacket(app->pBuffer, app->size);
-					//request->PrintPacket();
+				//DumpPacket(app->pBuffer, app->size);
+				//request->PrintPacket();
 
-					if (!camp_timer)
-					{
-						int16 camp_time = 20; // default if rule cannot be found
-						if(GetAdminStatus() >= 100)
-							camp_time = rule_manager.GetGlobalRule(R_World, GMCampTimer)->GetInt16();
-						else
-							camp_time = rule_manager.GetGlobalRule(R_World, PlayerCampTimer)->GetInt16();
+				if (!camp_timer) {
+					int16 camp_time = 20; // default if rule cannot be found
+					if (GetAdminStatus() >= 100)
+						camp_time = rule_manager.GetGlobalRule(R_World, GMCampTimer)->GetInt16();
+					else
+						camp_time = rule_manager.GetGlobalRule(R_World, PlayerCampTimer)->GetInt16();
 
-						PacketStruct* response = configReader.getStruct("WS_Camp",GetVersion());
-						if(response)
-						{
-							bool disconnect = false;
-							if(request->getType_int8_ByName("camp_desktop") == 1 && request->getType_int8_ByName("quit") == 1)
-							{
-								// Command: /camp desktop
-								// Command: /quit
-								response->setDataByName("camp_desktop", 1);
-								disconnect = true;
-							}
-							else
-							{
-								// Command: /camp 
-								response->setDataByName("camp_desktop", request->getType_int8_ByName("camp_desktop"));
-								response->setDataByName("camp_char_select", request->getType_int16_ByName("camp_char_select"));
-								response->setDataByName("seconds", camp_time);
-							}
-
-							camp_timer = new Timer(camp_time * 1000);
-							camp_timer->Enable();
-
-							if(request->getType_EQ2_16BitString_ByName("char_name").data.length() > 0)
-							{
-								// /camp {char_name}
-								response->setDataByName("char_name", request->getType_EQ2_16BitString_ByName("char_name").data.c_str());
-							}
-							else if(request->getType_int8_ByName("camp_desktop") == 0 && request->getType_int16_ByName("camp_char_select") == 0)
-							{ 
-								// /camp  (go back to char selection screen)
-								response->setDataByName("char_name", " ");
-								response->setDataByName("camp_char_select", 1);
-							}
-
-							LogWrite(CCLIENT__DEBUG, 0, "CClient", "WS_Camp - seconds: %i, camp_desktop: %i, camp_char_select: %i, (to) char_name: %s", 
-								response->getType_int8_ByName("seconds"),
-								response->getType_int8_ByName("camp_desktop"),
-								response->getType_int8_ByName("camp_char_select"),
-								( response->getType_EQ2_16BitString_ByName("char_name").data.length() > 0 ) ? response->getType_EQ2_16BitString_ByName("char_name").data.c_str() : "");
-
-							// JA: trying to recognize /camp vs LD (see ZoneServer::ClientProcess())
-							if( (player->GetActivityStatus() & ACTIVITY_STATUS_CAMPING) == 0 )
-								player->SetActivityStatus(player->GetActivityStatus() + ACTIVITY_STATUS_CAMPING);
-							//response->PrintPacket();
-							QueuePacket(response->serialize());
-							safe_delete(response);
-							if(disconnect)
-								Disconnect();
+					PacketStruct* response = configReader.getStruct("WS_Camp", GetVersion());
+					if (response) {
+						bool disconnect = false;
+						if (request->getType_int8_ByName("camp_desktop") == 1 && request->getType_int8_ByName("quit") == 1) {
+							// Command: /camp desktop
+							// Command: /quit
+							response->setDataByName("camp_desktop", 1);
+							disconnect = true;
 						}
+						else {
+							// Command: /camp 
+							response->setDataByName("camp_desktop", request->getType_int8_ByName("camp_desktop"));
+							response->setDataByName("camp_char_select", request->getType_int16_ByName("camp_char_select"));
+							response->setDataByName("seconds", camp_time);
+						}
+
+						camp_timer = new Timer(camp_time * 1000);
+						camp_timer->Enable();
+
+						if (request->getType_EQ2_16BitString_ByName("char_name").data.length() > 0) {
+							// /camp {char_name}
+							response->setDataByName("char_name", request->getType_EQ2_16BitString_ByName("char_name").data.c_str());
+						}
+						else if (request->getType_int8_ByName("camp_desktop") == 0 && request->getType_int16_ByName("camp_char_select") == 0) {
+							// /camp  (go back to char selection screen)
+							response->setDataByName("char_name", " ");
+							response->setDataByName("camp_char_select", 1);
+						}
+
+						LogWrite(CCLIENT__DEBUG, 0, "CClient", "WS_Camp - seconds: %i, camp_desktop: %i, camp_char_select: %i, (to) char_name: %s",
+							response->getType_int8_ByName("seconds"),
+							response->getType_int8_ByName("camp_desktop"),
+							response->getType_int8_ByName("camp_char_select"),
+							(response->getType_EQ2_16BitString_ByName("char_name").data.length() > 0) ? response->getType_EQ2_16BitString_ByName("char_name").data.c_str() : "");
+
+						// JA: trying to recognize /camp vs LD (see ZoneServer::ClientProcess())
+						if ((player->GetActivityStatus() & ACTIVITY_STATUS_CAMPING) == 0)
+							player->SetActivityStatus(player->GetActivityStatus() + ACTIVITY_STATUS_CAMPING);
+						//response->PrintPacket();
+						QueuePacket(response->serialize());
+						safe_delete(response);
+						if (disconnect)
+							Disconnect();
 					}
 				}
-				safe_delete(request);
-				break;
 			}
+			safe_delete(request);
+			break;
+		}
 		case OP_StoodMsg:{
 			LogWrite(OPCODE__DEBUG, 1, "Opcode", "Opcode 0x%X (%i): OP_StoodMsg", opcode, opcode);
 			if(camp_timer)

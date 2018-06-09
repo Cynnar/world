@@ -89,6 +89,9 @@ Spawn::Spawn(){
 	m_illusionModel = 0;
 	Cell_Info.CurrentCell = nullptr;
 	Cell_Info.CellListIndex = -1;
+	m_addedToWorldTimestamp = 0;
+	m_spawnAnim = 0;
+	m_spawnAnimLeeway = 0;
 	m_Update.SetName("Spawn::m_Update");
 	m_requiredHistory.SetName("Spawn::m_requiredHistory");
 	m_requiredQuests.SetName("Spawn::m_requiredQuests");
@@ -131,6 +134,19 @@ Spawn::~Spawn(){
 void Spawn::InitializeHeaderPacketData(Player* player, PacketStruct* header, int16 index) {
 	header->setDataByName("index", index);
 
+	if (GetSpawnAnim() > 0 && Timer::GetCurrentTime2() < (GetAddedToWorldTimestamp() + GetSpawnAnimLeeway())) {
+		if (header->GetVersion() >= 57080)
+			header->setDataByName("spawn_anim", GetSpawnAnim());
+		else
+			header->setDataByName("spawn_anim", (int16)GetSpawnAnim());
+	}
+	else {
+		if (header->GetVersion() >= 57080)
+			header->setDataByName("spawn_anim", 0xFFFFFFFF);
+		else
+			header->setDataByName("spawn_anim", 0xFFFF);
+	}
+
 	if (primary_command_list.size() > 0){
 		if (primary_command_list.size() > 1) {
 			header->setArrayLengthByName("command_list", primary_command_list.size());
@@ -155,10 +171,6 @@ void Spawn::InitializeHeaderPacketData(Player* player, PacketStruct* header, int
 		MSpawnGroup->releasereadlock(__FUNCTION__, __LINE__);
 	}
 
-	if (header->GetVersion() >= 57080)
-		header->setDataByName("unknown", 0xFFFFFFFF);
-	else
-		header->setDataByName("unknown", 0xFFFF);
 	header->setDataByName("spawn_id", player->GetIDWithPlayerSpawn(this));
 	header->setDataByName("crc", id);
 	header->setDataByName("time_stamp", Timer::GetCurrentTime2());
@@ -2082,25 +2094,30 @@ bool Spawn::CalculateChange(){
 				GetZone()->CallSpawnScript(this, SPAWN_SCRIPT_CUSTOM, 0, data->lua_function.c_str());
 
 			RemoveRunningLocation();
-			CalculateChange();
+			//CalculateChange();
 		}
 		else if(data){
 			// Speed is per second so we need a time_step (amount of time since the last update) to modify movement by
-			float time_step = ((float)(Timer::GetCurrentTime2() - last_movement_update))/1000;
+			float time_step = (Timer::GetCurrentTime2() - last_movement_update) * 0.001; // * 0.001 is the same as / 1000, float muliplications is suppose to be faster though
 
-			// Code taken from EQEmu and modified to work for us
+			// Get current location
 			float nx = GetX();
 			float ny = GetY();
 			float nz = GetZ();
-
+			
+			// Get Forward vecotr
 			float tar_vx = data->x - nx;
 			float tar_vy = data->y - ny;
 			float tar_vz = data->z - nz;
 
-			//float test_vector=sqrtf (data->x*data->x + data->y*data->y + data->z*data->z);
-			// Goto http://www.eq2emulator.net/phpBB3/viewtopic.php?f=13&t=3180#p24256
-			// for detailed info on how I got the speed equation (1.1043506061 * GetSpeed() + 0.1832966667)
-			float tar_vector = (1.1043506061 * GetSpeed() + 0.1832966667) / sqrtf (tar_vx*tar_vx + tar_vy*tar_vy + tar_vz*tar_vz);
+			// Multiply speed by the time_step to get how much should have changed over the last tick
+			float speed = GetSpeed() * time_step;
+
+			// Normalize the forward vector and multiply by speed, this gives us our change in coords, just need to add them to our current coords
+			float len = sqrtf(tar_vx * tar_vx + tar_vy * tar_vy + tar_vz * tar_vz);
+			tar_vx = (tar_vx / len) * speed;
+			tar_vy = (tar_vy / len) * speed;
+			tar_vz = (tar_vz / len) * speed;
 
 			// Distance less then 0.5 just set the npc to the target location
 			if (GetDistance(data->x, data->y, data->z, IsWidget() ? false : true) <= 0.5f) {
@@ -2109,9 +2126,9 @@ bool Spawn::CalculateChange(){
 				SetZ(data->z, false);
 			}
 			else {
-				SetX(GetX() + ((tar_vx*tar_vector)*time_step), false);
-				SetY(GetY() + ((tar_vy*tar_vector)*time_step), false);
-				SetZ(GetZ() + ((tar_vz*tar_vector)*time_step), false);
+				SetX(nx + tar_vx, false);
+				SetY(ny + tar_vy, false);
+				SetZ(nz + tar_vz, false);
 			}
 
 			if (GetZone()->Grid != nullptr) {
@@ -2131,7 +2148,7 @@ bool Spawn::CalculateChange(){
 }
 
 void Spawn::CalculateRunningLocation(bool stop){
-	CalculateChange();
+	bool removed = CalculateChange();
 	if(stop) {
 		//following = false;
 		SetPos(&appearance.pos.X2, GetX());
@@ -2140,6 +2157,15 @@ void Spawn::CalculateRunningLocation(bool stop){
 		SetPos(&appearance.pos.X3, GetX());
 		SetPos(&appearance.pos.Y3, GetY());
 		SetPos(&appearance.pos.Z3, GetZ());
+	}
+	else if (removed && movement_locations->size() > 0) {
+		MovementLocation* current_location = movement_locations->at(0);
+		if (movement_locations->size() > 1) {
+			MovementLocation* data = movement_locations->at(1);
+			RunToLocation(current_location->x, current_location->y, current_location->z, data->x, data->y, data->z);
+		}
+		else
+			RunToLocation(current_location->x, current_location->y, current_location->z, 0, 0, 0);
 	}
 }
 

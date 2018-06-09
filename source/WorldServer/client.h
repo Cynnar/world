@@ -144,8 +144,8 @@ public:
 	void	SetConnected(bool val){ connected = val; }
 	bool	IsConnected(){ return connected; }
 	bool	IsReadyForSpawns(){ return ready_for_spawns; }
+	bool	IsReadyForUpdates() { return ready_for_updates; }
 	bool	IsZoning(){ return client_zoning; }
-	bool	ready_for_updates;
 	void	SetReadyForSpawns(bool val);
 	void	QueuePacket(EQ2Packet* app);
 	void	SendLoginInfo();
@@ -443,6 +443,7 @@ private:
 	Timer*	disconnect_timer;
 	bool	connected;
 	bool	ready_for_spawns;
+	bool	ready_for_updates;
 	bool	seencharsel;
 	bool	connected_to_zone;
 	bool	client_zoning;

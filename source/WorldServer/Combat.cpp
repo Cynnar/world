@@ -402,6 +402,7 @@ bool Entity::SpellAttack(Spawn* victim, float distance, LuaSpell* luaspell, int8
 				if(success_message.find("%t") < 0xFFFFFFFF)
 					success_message.replace(success_message.find("%t"), 2, victim->GetName());
 				client->Message(CHANNEL_COLOR_SPELL, success_message.c_str());
+				GetZone()->SendDamagePacket(this, victim, DAMAGE_PACKET_TYPE_SPELL_DAMAGE, hit_result, damage_type, 0, spell->GetName());
 			}
 		}
 		if(spell->GetSpellData()->effect_message.length() > 0){

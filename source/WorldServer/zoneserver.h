@@ -606,9 +606,9 @@ private:
 	void	AddDeadSpawn(Spawn* spawn, int32 timer = 0xFFFFFFFF);												// never used outside zone server
 	int32	CalculateSpawnGroup(SpawnLocation* spawnlocation, bool respawn = false);							// never used outside zone server
 	float	GetSpawnGroupChance(int32 group_id);																// never used outside zone server
-	vector<int32>*	GetAssociatedLocations(set<int32>* groups);											// never used outside zone server
-	set<int32>* GetAssociatedGroups(int32 group_id);														// never used outside zone server
-	list<int32>* GetSpawnGroupsByLocation(int32 location_id);												// never used outside zone server
+	vector<int32>*	GetAssociatedLocations(set<int32>* groups);													// never used outside zone server
+	set<int32>* GetAssociatedGroups(int32 group_id);															// never used outside zone server
+	list<int32>* GetSpawnGroupsByLocation(int32 location_id);													// never used outside zone server
 	void	ProcessSpawnLocation(int32 location_id, bool respawn = false);										// never used outside zone server
 	Spawn*	ProcessSpawnLocation(SpawnLocation* spawnlocation, bool respawn = false);							// never used outside zone server
 	Spawn*	ProcessInstanceSpawnLocation(SpawnLocation* spawnlocation, map<int32,int32>* instNPCs, map<int32,int32>* instGroundSpawns, map<int32,int32>* instObjSpawns, map<int32,int32>* instWidgetSpawns, map<int32,int32>* instSignSpawns, bool respawn = false);													// never used outside zone server
@@ -701,7 +701,8 @@ private:
 	map<int32, list<int32>* >						spawn_location_groups;
 	map<int32, SpawnLocation*>						spawn_location_list;
 	MutexMap<Client*, MutexMap<int32, float >* >	spawn_range_map;								// int32 in the MutexMap<int32, float>* = spawn id, float = distance
-	MutexMap<int32, int32>							widget_timers;									// 1st int32 = spawn id
+	Mutex MWidgetTimers;
+	map<int32, int32>								widget_timers;									// 1st int32 = spawn id
 
 	/* Mutexs */
 	Mutex	m_enemy_faction_list;

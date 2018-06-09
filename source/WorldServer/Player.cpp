@@ -1492,6 +1492,25 @@ bool Player::AddItem(Item* item){
 	}
 	return false;
 }
+bool Player::AddItemToBank(Item* item) {
+
+	if (item && item->details.item_id > 0) {
+
+		sint32 bag = -3;
+		sint16 slot = -1;
+		if (item_list.GetFirstFreeBankSlot(&bag, &slot)) {
+			item->details.inv_slot_id = bag;
+			item->details.slot_id = slot;
+			item->save_needed = true;
+			item_list.AddItem(item);
+			
+			return true;
+		}
+		else if (item_list.AddOverflowItem(item))
+			return true;
+	}
+	return false;
+}
 EQ2Packet*	Player::SendInventoryUpdate(int16 version){
 	return item_list.serialize(this, version);
 }

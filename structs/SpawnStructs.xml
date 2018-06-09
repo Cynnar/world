@@ -2,7 +2,7 @@
 <Struct Name="WS_SpawnStruct_Header" ClientVersion="1">
 <Data ElementName="index" Type="int16" Size="1" OversizedValue="255" />
 <Data ElementName="spawn_id" Type="int32" Size="1" />
-<Data ElementName="unknown" Type="int16" Size="1" />
+<Data ElementName="spawn_anim" Type="int16" Size="1" />
 <Data ElementName="unknown2" Type="int32" Size="1" />
 <Data ElementName="crc" Type="int32" Size="1" />
 <Data ElementName="command_list" Type="int8" Size="1" />
@@ -23,7 +23,7 @@
 <Struct Name="WS_SpawnStruct_Header" ClientVersion="57080">
 <Data ElementName="index" Type="int16" Size="1" OversizedValue="255" />
 <Data ElementName="spawn_id" Type="int32" Size="1" />
-<Data ElementName="unknown" Type="int32" Size="1" />
+<Data ElementName="spawn_anim" Type="int32" Size="1" />
 <Data ElementName="unknown2" Type="int32" Size="1" />
 <Data ElementName="crc" Type="int32" Size="1" />
 <Data ElementName="command_list" Type="int8" Size="1" />

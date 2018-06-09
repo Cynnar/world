@@ -449,6 +449,7 @@ public:
 	Quest* AddStepProgress(int32 quest_id, int32 step, int32 progress);
 	int32  GetStepProgress(int32 quest_id, int32 step_id);
 	bool AddItem(Item* item);
+	bool AddItemToBank(Item* item);
 	int16 GetSpellSlotMappingCount();
 	int16 GetSpellPacketCount();
 	Quest* GetQuest(int32 quest_id);

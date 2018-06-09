@@ -858,10 +858,11 @@ to zero and treated like placeholders." />
 	<Data ElementName="unknown2a" Type="int32" />
 	<Data ElementName="expansions_enabled" Type="int32" />
 	<Data ElementName="unknown3a" Type="int32" />
+	<Data ElementName="unknown3aa" Type="int8" />
 	<Data ElementName="unknown2b" Type="int32" />
 	<Data ElementName="unknown3b" Type="int32" />
 	<Data ElementName="unknown3c" Type="int32" />
-	<Data ElementName="unknown3d" Type="int8" Size="2" />
+	<Data ElementName="unknown3d" Type="int8" />
 	<Data ElementName="auction_website" Type="EQ2_8Bit_String" />
 	<Data ElementName="auction_port" Type="int32" />
 	<Data ElementName="upload_page" Type="EQ2_8Bit_String" />
@@ -890,8 +891,8 @@ to zero and treated like placeholders." />
 	<Data ElementName="unknown11a" Type="int8" />
 	<Data ElementName="unknown11b" Type="int8" />
 	<Data ElementName="unknown11c" Type="int8" />
-	<Data ElementName="permission_level" Type="int8" />
 	<Data ElementName="unknown11e" Type="int8" />
+	<Data ElementName="permission_level" Type="int8" />
 	<Data ElementName="num_adv" Type="int32" />
 	<Data ElementName="adv_array" Type="Array" ArraySizeVariable="num_adv">
 		<Data ElementName="adv_name" Type="EQ2_16Bit_String" />

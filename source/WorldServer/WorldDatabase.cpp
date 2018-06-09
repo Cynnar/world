@@ -1018,7 +1018,7 @@ void WorldDatabase::LoadSigns(ZoneServer* zone){
 	Sign* sign = 0;
 	int32 id = 0;
 	int32 total = 0;
-	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT ss.spawn_id, s.name, s.model_type, s.size, s.show_command_icon, ss.widget_id, ss.widget_x, ss.widget_y, ss.widget_z, s.command_primary, s.command_secondary, s.collision_radius, ss.icon, ss.type, ss.title, ss.description, ss.sign_distance, ss.zone_id, ss.zone_x, ss.zone_y, ss.zone_z, ss.zone_heading, ss.include_heading, ss.include_location, s.transport_id, s.size_offset, s.display_hand_icon\n"
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT ss.spawn_id, s.name, s.model_type, s.size, s.show_command_icon, ss.widget_id, ss.widget_x, ss.widget_y, ss.widget_z, s.command_primary, s.command_secondary, s.collision_radius, ss.icon, ss.type, ss.title, ss.description, ss.sign_distance, ss.zone_id, ss.zone_x, ss.zone_y, ss.zone_z, ss.zone_heading, ss.include_heading, ss.include_location, s.transport_id, s.size_offset, s.display_hand_icon, s.visual_state\n"
 												  "FROM spawn s\n"
 												  "INNER JOIN spawn_signs ss\n"
 												  "ON s.id = ss.spawn_id\n"
@@ -1075,6 +1075,7 @@ void WorldDatabase::LoadSigns(ZoneServer* zone){
 		sign->SetTransporterID(atoul(row[24]));
 		sign->SetSizeOffset(atoi(row[25]));
 		sign->appearance.display_hand_icon = atoi(row[26]);
+		sign->SetVisualState(atoi(row[27]));
 		zone->AddSign(id, sign);
 		total++;
 
@@ -1131,10 +1132,12 @@ void WorldDatabase::LoadWidgets(ZoneServer* zone){
 		widget->SetIncludeHeading(atoi(row[12]) == 1);
 		widget->SetIncludeLocation(atoi(row[13]) == 1);
 		widget->SetWidgetIcon(atoi(row[14]));
-		if(strncasecmp(row[15],"Generic", 7) == 0)
+		if (strncasecmp(row[15], "Generic", 7) == 0)
 			widget->SetWidgetType(WIDGET_TYPE_GENERIC);
-		else if(strncasecmp(row[15],"Door", 4) == 0)
+		else if (strncasecmp(row[15], "Door", 4) == 0)
 			widget->SetWidgetType(WIDGET_TYPE_DOOR);
+		else if (strncasecmp(row[15], "Lift", 4) == 0)
+			widget->SetWidgetType(WIDGET_TYPE_LIFT);
 		widget->SetOpenHeading(atof(row[16]));
 		widget->SetOpenY(atof(row[17]));
 		widget->SetActionSpawnID(atoul(row[18]));
@@ -5375,7 +5378,7 @@ bool WorldDatabase::GetTableVersions(vector<TableVersion*>* table_versions) {
 	//don't treat 1146 (table not found) as an error since the patch server will create it
 	database_new.SetIgnoredErrno(1146);
 
-	success = database_new.Select(&result, "SELECT `name`,`version`,`data_version`\n"
+	success = database_new.Select(&result, "SELECT `name`,`version`,`download_version`\n"
 										   "FROM `table_versions`\n");
 	
 	database_new.RemoveIgnoredErrno(1146);
@@ -5669,7 +5672,7 @@ bool WorldDatabase::LoadSign(ZoneServer* zone, int32 spawn_id) {
 	Sign* sign = 0;
 	int32 id = 0;
 	DatabaseResult result;
-	database_new.Select(&result, "SELECT ss.spawn_id, s.name, s.model_type, s.size, s.show_command_icon, ss.widget_id, ss.widget_x, ss.widget_y, ss.widget_z, s.command_primary, s.command_secondary, s.collision_radius, ss.icon, ss.type, ss.title, ss.description, ss.sign_distance, ss.zone_id, ss.zone_x, ss.zone_y, ss.zone_z, ss.zone_heading, ss.include_heading, ss.include_location, s.transport_id, s.size_offset, s.display_hand_icon\n"
+	database_new.Select(&result, "SELECT ss.spawn_id, s.name, s.model_type, s.size, s.show_command_icon, ss.widget_id, ss.widget_x, ss.widget_y, ss.widget_z, s.command_primary, s.command_secondary, s.collision_radius, ss.icon, ss.type, ss.title, ss.description, ss.sign_distance, ss.zone_id, ss.zone_x, ss.zone_y, ss.zone_z, ss.zone_heading, ss.include_heading, ss.include_location, s.transport_id, s.size_offset, s.display_hand_icon, s.visual_state\n"
 								 "FROM spawn s\n"
 								 "INNER JOIN spawn_signs ss\n"
 								 "ON ss.spawn_id = s.id\n"
@@ -5719,6 +5722,7 @@ bool WorldDatabase::LoadSign(ZoneServer* zone, int32 spawn_id) {
 		sign->SetTransporterID(result.GetInt32(24));
 		sign->SetSizeOffset(result.GetInt8(25));
 		sign->appearance.display_hand_icon = result.GetInt8(26);
+		sign->SetVisualState(result.GetInt16(27));
 		zone->AddSign(id, sign);
 
 
