@@ -2428,9 +2428,13 @@ void Player::PrepareIncomingMovementPacket(int32 len,uchar* data,int16 version)
 	float direction1;	// = update->getType_float_ByName("direction1");
 	float direction2;	// = update->getType_float_ByName("direction2");;
 	float speed;		// = update->getType_float_ByName("speed");;
+	float side_speed;
 	float x;			// = update->getType_float_ByName("x");;
 	float y;			// = update->getType_float_ByName("y");;
 	float z;			// = update->getType_float_ByName("z");;
+	float x_speed;
+	float y_speed;
+	float z_speed;
 
 	// comment out this if/else if/else block if you use xml structs
 	if (version >= 1144) {
@@ -2440,9 +2444,15 @@ void Player::PrepareIncomingMovementPacket(int32 len,uchar* data,int16 version)
 		direction1 = update->direction1;
 		direction2 = update->direction2;
 		speed = update->speed;
+		side_speed = update->side_speed;
 		x = update->x;
 		y = update->y;
 		z = update->z;
+		x_speed = update->speed_x;
+		y_speed = update->speed_y;
+		z_speed = update->speed_z;
+
+		SetPitch(180 + update->pitch);
 	}
 	else if (version >= 1096) {
 		Player_Update1096* update = (Player_Update1096*)movement_packet;
@@ -2451,9 +2461,15 @@ void Player::PrepareIncomingMovementPacket(int32 len,uchar* data,int16 version)
 		direction1 = update->direction1;
 		direction2 = update->direction2;
 		speed = update->speed;
+		side_speed = update->side_speed;
 		x = update->x;
 		y = update->y;
 		z = update->z;
+		x_speed = update->speed_x;
+		y_speed = update->speed_y;
+		z_speed = update->speed_z;
+
+		SetPitch(180 + update->pitch);
 	}
 	else {
 		Player_Update* update = (Player_Update*)movement_packet;
@@ -2462,19 +2478,29 @@ void Player::PrepareIncomingMovementPacket(int32 len,uchar* data,int16 version)
 		direction1 = update->direction1;
 		direction2 = update->direction2;
 		speed = update->speed;
+		side_speed = update->side_speed;
 		x = update->x;
 		y = update->y;
 		z = update->z;
+		x_speed = update->speed_x;
+		y_speed = update->speed_y;
+		z_speed = update->speed_z;
+
+		SetPitch(180 + update->pitch);
 	}
 
- 	SetHeading((sint16)(direction1 * 64), (sint16)(direction2 * 64), true);
-	if(activity != last_movement_activity)
-	{
+ 	SetHeading((sint16)(direction1 * 64), (sint16)(direction2 * 64));
+	if(activity != last_movement_activity) {
 		if(GetZone() && GetZone()->GetDrowningVictim(this) && (activity == UPDATE_ACTIVITY_RUNNING || activity == UPDATE_ACTIVITY_IN_WATER_ABOVE)) // not drowning anymore
 			GetZone()->RemoveDrowningVictim(this);
 
 		if((activity == UPDATE_ACTIVITY_DROWNING || activity == UPDATE_ACTIVITY_DROWNING2) && GetZone() && !GetInvulnerable()) //drowning
 			GetZone()->AddDrowningVictim(this);
+
+		if (activity == UPDATE_ACTIVITY_JUMPING || activity == UPDATE_ACTIVITY_FALLING)
+			SetInitialState(1024);
+		else if (GetInitialState() == 1024)
+			SetInitialState(16512);
 
 		last_movement_activity = activity;
 	}
@@ -2516,10 +2542,23 @@ void Player::PrepareIncomingMovementPacket(int32 len,uchar* data,int16 version)
 
 	if(!IsResurrecting() && !GetBoatSpawn())
 	{
-		SetX(x);
-		SetY(y);
-		SetZ(z);
-		pos_packet_speed = speed;
+		if (!IsRooted() && !IsMezzedOrStunned()) {
+			SetX(x);
+			SetY(y);
+			SetZ(z);
+			SetSpeedX(x_speed);
+			SetSpeedY(y_speed);
+			SetSpeedZ(z_speed);
+			SetSideSpeed(side_speed);
+			pos_packet_speed = speed;
+		}
+		else {
+			SetSpeedX(0);
+			SetSpeedY(0);
+			SetSpeedZ(0);
+			SetSideSpeed(0);
+			pos_packet_speed = 0;
+		}
 	}
 
 	if(appearance.pos.grid_id != grid_id)

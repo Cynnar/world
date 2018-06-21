@@ -112,7 +112,7 @@ int EQ2Emu_lua_SetRequiredQuest(lua_State* state){
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
-	int32 quest_step = lua_interface->GetInt32Value(state, 3);
+	int16 quest_step = lua_interface->GetInt16Value(state, 3);
 	bool private_spawn = (lua_interface->GetInt8Value(state, 4) == 1);
 	bool continued_access = (lua_interface->GetInt8Value(state, 5) == 1);
 	int16 flag_override = lua_interface->GetInt16Value(state, 6);
@@ -3577,6 +3577,10 @@ int EQ2Emu_lua_Charm(lua_State* state){
 	Spawn* owner = lua_interface->GetSpawn(state);
 	Spawn* pet = lua_interface->GetSpawn(state, 2);
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
+	if (!luaspell) {
+		lua_interface->LogError("LUA Charm command error: Spell is not valid, charm can only be used in spell scripts.");
+		return 0;
+	}
 
 	if (owner && pet && owner->IsEntity() && pet->IsNPC()) {
 		((Entity*)owner)->SetCharmedPet((Entity*)pet);
@@ -8589,4 +8593,23 @@ int EQ2Emu_lua_SetSpawnAnimation(lua_State* state) {
 	spawn->SetSpawnAnimLeeway(leeway);
 
 	return 0;
+}
+
+int EQ2Emu_lua_GetClientVersion(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* player = lua_interface->GetSpawn(state);
+	if (!player) {
+		return 0;
+	}
+
+	Client* client = player->GetZone()->GetClientBySpawn(player);
+	if (!client) {
+		return 0;
+	}
+
+
+	lua_interface->SetInt32Value(state, client->GetVersion());
+	return 1;
 }

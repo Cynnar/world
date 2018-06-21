@@ -76,6 +76,7 @@ extern int errno;
 #include "Tradeskills/Tradeskills.h"
 #include "RaceTypes/RaceTypes.h"
 #include <algorithm>
+#include <random>
 
 #include "Zone/SPGrid.h"
 #include "Bots/Bot.h"
@@ -2306,16 +2307,25 @@ void ZoneServer::AddLoot(NPC* npc){
 						if (loot_drops) {
 							LootDrop* drop = 0;
 							int16 count = 0;
+
+							std::shuffle(loot_drops->begin(), loot_drops->end(), std::default_random_engine(Timer::GetCurrentTime2()));
+
 							int16 IC = 0;
 							for (loot_drop_itr = loot_drops->begin(); loot_drop_itr != loot_drops->end(); loot_drop_itr++) {
 								drop = *loot_drop_itr;
 								droppercenttotal += drop->probability;
 							}
+
+							
 							int droplistsize = loot_drops->size();
 							float chancedroptally = 0;
 							chancedrop = static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / 100));
 							for (loot_drop_itr = loot_drops->begin(); loot_drop_itr != loot_drops->end(); loot_drop_itr++) {
 								drop = *loot_drop_itr;
+
+								if (npc->HasLootItemID(drop->item_id))
+									continue;
+
 								if (droppercenttotal >= 100)
 									droppercenttotal = 100;
 								chancedroptally += 100 / droppercenttotal * drop->probability;

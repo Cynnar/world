@@ -115,7 +115,7 @@ extern MasterAAList master_tree_nodes;
 
 using namespace std;
 
-Client::Client(EQStream* ieqs) : pos_update(200), quest_pos_timer(2000), lua_debug_timer(30000){
+Client::Client(EQStream* ieqs) : pos_update(125), quest_pos_timer(2000), lua_debug_timer(30000){
 	eqs = ieqs;
 	ip = eqs->GetrIP();
 	port = ntohs(eqs->GetrPort());
@@ -3797,23 +3797,14 @@ void Client::Loot(int32 total_coins, vector<Item*>* items, Entity* entity){
 				tmpPacket = item->serialize(GetVersion(), true, GetPlayer(), false, 1, 0, false, true);
 
 				int8 offset = 0;
-				if (GetVersion() >= 63119) {
+				if (GetVersion() >= 1188) {
 					offset = 13;
-					/*memcpy(ptr, tmpPacket->pBuffer + 11, tmpPacket->size - 11);
-					ptr += tmpPacket->size - 11;
-					packet_size += tmpPacket->size - 11;*/
 				}
 				else if (GetVersion() >= 860){
 					offset = 11;
-					/*memcpy(ptr, tmpPacket->pBuffer + 11, tmpPacket->size - 11);
-					ptr += tmpPacket->size - 11;
-					packet_size += tmpPacket->size - 11;*/
 				}
 				else{
 					offset = 10;
-					/*memcpy(ptr, tmpPacket->pBuffer + 10, tmpPacket->size - 10);
-					ptr += tmpPacket->size - 10;
-					packet_size += tmpPacket->size - 10;*/
 				}
 
 				memcpy(ptr, tmpPacket->pBuffer + offset, tmpPacket->size - offset);

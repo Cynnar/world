@@ -46,7 +46,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -63,7 +65,9 @@
 <Data ElementName="pos_z3" Type="float" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="2" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="8" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6a" Type="int16" Size="4" />
 <Data ElementName="pos_collision_radius" Type="int16" Size="1" />
 <Data ElementName="pos_size" Type="int16" Size="1" />
 <Data ElementName="pos_size_multiplier" Type="int16" Size="1" />
@@ -74,7 +78,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -91,7 +97,9 @@
 <Data ElementName="pos_z3" Type="float" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="2" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="8" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6a" Type="int16" Size="4" />
 <Data ElementName="pos_collision_radius" Type="int16" Size="1" />
 <Data ElementName="pos_size" Type="int16" Size="1" />
 <Data ElementName="pos_size_ratio" Type="float" Size="1" />
@@ -103,7 +111,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -119,7 +129,9 @@
 <Data ElementName="pos_unknown3b" Type="int8" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="2" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="8" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6a" Type="int16" Size="4" />
 <Data ElementName="pos_collision_radius" Type="int16" Size="1" />
 <Data ElementName="pos_size" Type="int16" Size="1" />
 <Data ElementName="pos_size_ratio" Type="float" Size="1" />
@@ -131,7 +143,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -147,7 +161,9 @@
 <Data ElementName="pos_unknown3b" Type="int8" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="2" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="8" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6a" Type="int16" Size="4" />
 <Data ElementName="pos_collision_radius" Type="int16" Size="1" />
 <Data ElementName="pos_size" Type="int16" Size="1" />
 <Data ElementName="pos_size_ratio" Type="float" Size="1" />
@@ -159,7 +175,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -175,7 +193,9 @@
 <Data ElementName="pos_unknown3b" Type="int8" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="3" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="8" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6a" Type="int16" Size="4" />
 <Data ElementName="pos_collision_radius" Type="int16" Size="1" />
 <Data ElementName="pos_size" Type="int16" Size="1" />
 <Data ElementName="pos_size_ratio" Type="float" Size="1" />
@@ -187,7 +207,9 @@
 <Data ElementName="pos_x" Type="float" Size="1" />
 <Data ElementName="pos_y" Type="float" Size="1" />
 <Data ElementName="pos_z" Type="float" Size="1" />
-<Data ElementName="pos_unknown" Type="sint16" Size="3" />
+<Data ElementName="pos_x_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_y_velocity" Type="sint16" Size="1" />
+<Data ElementName="pos_z_velocity" Type="sint16" Size="1" />
 <Data ElementName="pos_heading1" Type="sint16" Size="1" />
 <Data ElementName="pos_heading2" Type="sint16" Size="1" />
 <Data ElementName="pos_speed" Type="int16" Size="1" />
@@ -203,7 +225,9 @@
 <Data ElementName="pos_unknown3b" Type="int8" Size="1" />
 <Data ElementName="pos_unknown4" Type="int16" Size="3" />
 <Data ElementName="pos_move_type" Type="int16" Size="1" />
-<Data ElementName="pos_unknown6" Type="int16" Size="5" />
+<Data ElementName="pos_unknown6" Type="int16" Size="3" />
+<Data ElementName="pos_side_speed" Type="int16" Size="1" />
+<Data ElementName="pos_unknown6" Type="int16" Size="1" />
 <Data ElementName="pos_pitch1" Type="sint16" />
 <Data ElementName="pos_unknown7" Type="int16" Size="4" />
 <Data ElementName="pos_pitch2" Type="sint16" />
@@ -488,7 +512,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -577,7 +601,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -667,7 +691,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -756,7 +780,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -846,7 +870,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -936,7 +960,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1030,7 +1054,7 @@
 <Data ElementName="unknown4" Type="int8" Size="1" />
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="2" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1122,7 +1146,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1208,7 +1232,7 @@
 <Data ElementName="unknown4" Type="int8" Size="1" />
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="2" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1301,7 +1325,7 @@
 <Data ElementName="unknown4" Type="int8" Size="1" />
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="2" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1394,7 +1418,7 @@
 <Data ElementName="unknown4" Type="int8" Size="1" />
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="2" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1490,7 +1514,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int16" Size="1" />
 <Data ElementName="soga_model_type" Type="int16" Size="1" />
@@ -1588,7 +1612,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int32" Size="1" />
 <Data ElementName="soga_model_type" Type="int32" Size="1" />
@@ -1694,7 +1718,7 @@
 <Data ElementName="level" Type="int8" Size="1" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
 <Data ElementName="heroic_flag" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown7" Type="float" Size="1" />
 <Data ElementName="model_type" Type="int32" Size="1" />
 <Data ElementName="soga_model_type" Type="int32" Size="1" />
@@ -1875,10 +1899,15 @@
 <Data ElementName="spawn_type" Type="int8" Size="1" />
 <Data ElementName="icon" Type="int8" Size="1" />
 <Data ElementName="activity_status" Type="int32" Size="1" />
-<Data ElementName="unknown600554" Type="int8" Size="10" />
+<Data ElementName="unknownpk1" Type="int8" Size="2" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
+<Data ElementName="unknown600554" Type="int8" Size="4" />
 <Data ElementName="hp_remaining" Type="int32" Size="1" />
 <Data ElementName="power_percent" Type="int32" Size="1" />
-<Data ElementName="unknown600553" Type="int8" Size="9" />
+<Data ElementName="unknown600553" Type="int8" Size="4" />
+<Data ElementName="size_mod" Type="int8" Size="1" />
+<Data ElementName="size_type" Type="int8" Size="1" />
+<Data ElementName="unknown600553b" Type="int8" Size="3" />
 <Data ElementName="unknown4" Type="int8" />
 <Data ElementName="level" Type="int8" />
 <Data ElementName="unknown5" Type="int8" Size="1" />
@@ -1891,7 +1920,7 @@
 <Data ElementName="unknown21" Type="int8" Size="3" /><!--
 <Data ElementName="unknownz5" Type="int16" Size="1" />
 <Data ElementName="unknown6" Type="int8" Size="1" />
-<Data ElementName="unknown6b" Type="int32" Size="1" />
+<Data ElementName="activity_timer" Type="int32" Size="1" />
 <Data ElementName="unknown18" Type="int8" Size="68" />-->
 </Struct>
 <Struct Name="WS_SpawnStruct_Footer" ClientVersion="1">
@@ -1908,7 +1937,7 @@
 <Data ElementName="last_name" Type="EQ2_16Bit_String" Size="1" />
 <Data ElementName="suffix" Type="EQ2_16Bit_String" Size="1" />
 <Data ElementName="prefix" Type="EQ2_16Bit_String" Size="1" />
-<Data ElementName="unknown2" Type="int8" Size="2" />
+<Data ElementName="pvp_title" Type="EQ2_16Bit_String" Size="1" />
 <Data ElementName="guild" Type="EQ2_16Bit_String" Size="1" />
 <Data ElementName="is_transport" Type="int8" Size="1" />
 <Data ElementName="transport_array" Type="Array" ArraySizeVariable="is_transport">
@@ -2070,7 +2099,8 @@
 <Data ElementName="unknowna2" Type="int8" Size="4" />
 <Data ElementName="vis_flags" Type="int8" Size="1" />
 <Data ElementName="npc_aaxp" Type="int8" Size="1" />
-<Data ElementName="unknownb" Type="int8" Size="2" />
+<Data ElementName="unknownb" Type="int8" Size="1" />
+<Data ElementName="pvp_difficulty" Type="int8" Size="1" />
 <Data ElementName="hand_flag" Type="int8" Size="1" />
 <Data ElementName="unknown2" Type="int8" Size="2" />
 <Data ElementName="tag1" Type="int8" Size="1" />

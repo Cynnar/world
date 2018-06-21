@@ -1296,15 +1296,25 @@ void Spawn::InitializePosPacketData(Player* player, PacketStruct* packet){
 	}
 
 	packet->setDataByName("pos_collision_radius", appearance.pos.collision_radius > 0 ? appearance.pos.collision_radius : 32);
-	if (version <= 910){
+	if (version <= 910) {
 		packet->setDataByName("pos_size", size > 0 ? size : 32);
 		packet->setDataByName("pos_size_multiplier", 32); //32 is normal
 	}
-	else{
-		packet->setDataByName("pos_size_ratio", size > 0 ? (((float)size) / 32) : 1);
-		packet->setDataByName("pos_size_multiplier_ratio", 1);
+	else {
+		if (IsPlayer()) {
+			if (this != player)
+				packet->setDataByName("pos_size", 49152);
+
+			packet->setDataByName("pos_size_ratio", 1);
+			packet->setDataByName("pos_size_multiplier_ratio", 1); // used for growth with players
+		}
+		else {
+			packet->setDataByName("pos_size_ratio", size > 0 ? (((float)size) / 32) : 1);
+			packet->setDataByName("pos_size_multiplier_ratio", 1);
+		}
 	}
 	packet->setDataByName("pos_state", appearance.pos.state);
+
 	bool include_location = true;
 	if (IsWidget() && ((Widget*)this)->GetIncludeLocation() == false)
 		include_location = false;
@@ -1329,6 +1339,12 @@ void Spawn::InitializePosPacketData(Player* player, PacketStruct* packet){
 		}
 		if (IsSign())
 			packet->setDataByName("pos_unknown6", 3, 2);
+	}
+
+	if (IsPlayer()) {
+		packet->setDataByName("pos_x_velocity", static_cast<sint16>(GetSpeedX() * 32));
+		packet->setDataByName("pos_y_velocity", static_cast<sint16>(GetSpeedY() * 32));
+		packet->setDataByName("pos_z_velocity", static_cast<sint16>(GetSpeedZ() * 32));
 	}
 
 	if (IsWidget() && ((Widget*)this)->GetMultiFloorLift()) {
@@ -1366,32 +1382,35 @@ void Spawn::InitializePosPacketData(Player* player, PacketStruct* packet){
 		packet->setDataByName("pos_y3", appearance.pos.Y3);
 		packet->setDataByName("pos_z3", appearance.pos.Z3);
 	}
-	packet->setDataByName("pos_unknown2", 4, 2);
+	//packet->setDataByName("pos_unknown2", 4, 2);
 
 	int16 speed_multiplier = rule_manager.GetGlobalRule(R_Spawn, SpeedMultiplier)->GetInt16(); // was 1280, 600 and now 300... investigating why
-	float speed_ratio = rule_manager.GetGlobalRule(R_Spawn, SpeedRatio)->GetFloat(); // was 7.5 for 1280 and 600, then 0 for 300... investigating why
-	LogWrite(SPAWN__DEBUG, 5, "Spawn", "Speed: %.2f (from LUA), Multiplier: %i, Ratio: %.2f, Final: %.2f", GetSpeed(), speed_multiplier, speed_ratio, GetSpeed()*((float)speed_multiplier/speed_ratio));
-	if (speed_ratio > 0){
-		if (IsPlayer())
-			packet->setDataByName("pos_speed", ((Player*)this)->GetPosPacketSpeed()*((float)speed_multiplier / speed_ratio));
-		else
-			packet->setDataByName("pos_speed", GetSpeed()*((float)speed_multiplier / speed_ratio));
+	//float speed_ratio = rule_manager.GetGlobalRule(R_Spawn, SpeedRatio)->GetFloat(); // was 7.5 for 1280 and 600, then 0 for 300... investigating why
+
+	if (IsPlayer()) {
+		Player* player = static_cast<Player*>(this);
+
+		packet->setDataByName("pos_speed", player->GetPosPacketSpeed() * speed_multiplier);
+		packet->setDataByName("pos_side_speed", player->GetSideSpeed() * speed_multiplier);
 	}
-	else{
-		if (IsPlayer())
-			packet->setDataByName("pos_speed", ((Player*)this)->GetPosPacketSpeed()*speed_multiplier);
-		else
-			packet->setDataByName("pos_speed", GetSpeed()*speed_multiplier);
+	else {
+		packet->setDataByName("pos_speed", GetSpeed() * speed_multiplier);
+	}
+	
+	
+
+	if (IsNPC() || IsPlayer()) {
+		packet->setDataByName("pos_move_type", 25);
+	}
+	else if (IsWidget() || IsSign()) {
+		packet->setDataByName("pos_move_type", 11);
+	}
+	else if(IsGroundSpawn()) {
+		packet->setDataByName("pos_move_type", 16);
 	}
 
-	if(IsNPC() || IsWidget() || IsSign()){
-		packet->setDataByName("pos_move_type", 11);
+	if (!IsPlayer())
 		packet->setDataByName("pos_movement_mode", 2);
-	}
-	else if(IsGroundSpawn()){
-		packet->setDataByName("pos_move_type", 16);
-		packet->setDataByName("pos_movement_mode", 2);
-	}
 
 	if(version <= 910)
 		packet->setDataByName("pos_unknown10", 0xFFFF, 1);
@@ -2205,22 +2224,21 @@ bool Spawn::MeetsSpawnAccessRequirements(Player* player){
 	Quest* quest = 0;
 	//Check if we meet all quest requirements first..
 	m_requiredQuests.readlock(__FUNCTION__, __LINE__);
-	if (player && required_quests.size() > 0){
+	if (player && required_quests.size() > 0) {
 		map<int32, vector<int16>* >::iterator itr;
-		for (itr = required_quests.begin(); itr != required_quests.end(); itr++){
-			ret = false;
+		for (itr = required_quests.begin(); itr != required_quests.end(); itr++) {
 			player->AddQuestRequiredSpawn(this, itr->first);
 			vector<int16>* quest_steps = itr->second;
 			for (int32 i = 0; i < quest_steps->size(); i++) {
 				quest = player->GetQuest(itr->first);
-				if (req_quests_continued_access){
-					if (quest){
-						if (quest->GetQuestStepCompleted(quest_steps->at(i))){
+				if (req_quests_continued_access) {
+					if (quest) {
+						if (quest->GetQuestStepCompleted(quest_steps->at(i))) {
 							ret = true;
 							break;
 						}
 					}
-					else if (player->GetCompletedQuest(itr->first)){
+					else if (player->GetCompletedQuest(itr->first)) {
 						ret = true;
 						break;
 					}

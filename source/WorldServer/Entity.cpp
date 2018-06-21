@@ -710,6 +710,22 @@ int32 Entity::GetLootItemID(){
 	return ret;
 }
 
+bool Entity::HasLootItemID(int32 id) {
+	bool ret = false;
+
+	vector<Item*>::iterator itr;
+	MLootItems.readlock(__FUNCTION__, __LINE__);
+	for (itr = loot_items.begin(); itr != loot_items.end(); itr++) {
+		if ((*itr)->details.item_id == id) {
+			ret = true;
+			break;
+		}
+	}
+	MLootItems.releasereadlock(__FUNCTION__, __LINE__);
+
+	return ret;
+}
+
 Skill* Entity::GetSkillByName(const char* name, bool check_update){
 	LogWrite(MISC__TODO, 1, "TODO", "This does nothing... yet...\n\t(%s, function: %s, line #: %i)", __FILE__, __FUNCTION__, __LINE__);
 	return 0;

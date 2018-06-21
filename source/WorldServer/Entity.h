@@ -474,6 +474,7 @@ public:
 			return false;
 		return true;
 	}
+	bool HasLootItemID(int32 id);
 	int32 GetLootItemID();
 	Item*	LootItem(int32 id);
 	vector<Item*>* GetLootItems(){

@@ -1457,7 +1457,12 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 	packet->setSubstructSubstructDataByName("header", "info_header", "packetsubtype", subtype);  // should be substype
 	packet->setSubstructDataByName("header_info", "footer_type", 3);
 	packet->setSubstructDataByName("header_info", "item_id", details.item_id);
-	packet->setSubstructDataByName("header_info", "broker_item_id", details.item_id);
+	
+	if (!loot_item)
+		packet->setSubstructDataByName("header_info", "broker_item_id", details.item_id);
+	else
+		packet->setSubstructDataByName("header_info", "broker_item_id", 0xFFFFFFFFFFFFFFFF);
+
 	if(details.unique_id == 0)
 		packet->setSubstructDataByName("header_info", "unique_id", details.item_id);
 	else
