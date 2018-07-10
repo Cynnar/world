@@ -61,6 +61,7 @@ public:
 		pitch = 0;
 		roll = 0;
 		grid_id = 0;
+		conditional = 0;
 	}
 	~SpawnLocation(){
 		for(int32 i=0;i<entities.size();i++)
@@ -81,6 +82,7 @@ public:
 	float	total_percentage;
 	int32	grid_id;
 	string	script;
+	int8	conditional;
 };
 #endif
 

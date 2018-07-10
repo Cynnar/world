@@ -84,6 +84,12 @@ class Bot;
 #define SPAWN_SCRIPT_GROUP_DEAD			17
 #define SPAWN_SCRIPT_HEAR_SAY			18
 
+#define SPAWN_CONDITIONAL_NONE			0
+#define SPAWN_CONDITIONAL_DAY			1
+#define SPAWN_CONDITIONAL_NIGHT			2
+#define SPAWN_CONDITIONAL_NOT_RAINING	4
+#define SPAWN_CONDITIONAL_RAINING		8
+
 #define MAX_REVIVEPOINT_DISTANCE 1000
 
 /* JA: TODO Turn into R_World Rules */
@@ -588,6 +594,8 @@ public:
 
 
 	void	SendSpawn(Spawn* spawn, Client* client);														// moved from private to public for bots
+
+	void ProcessSpawnConditional(int8 condition);
 
 private:
 	/* Private Functions */

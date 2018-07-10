@@ -1522,13 +1522,13 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 					float x = player->GetX();
 					float y = player->GetY();
 					float z = player->GetZ();
-					player->PrepareIncomingMovementPacket(app->size-offset,app->pBuffer+offset,version);
+					player->PrepareIncomingMovementPacket(app->size - offset, app->pBuffer + offset, version);
 					distance = player->GetDistance(x, y, z, false);
-					if(distance > .5)
+					if (distance > .5)
 						current_zone->Interrupted(player, 0, SPELL_ERROR_INTERRUPTED, false, true);
 				}
 				else
-					player->PrepareIncomingMovementPacket(app->size-offset,app->pBuffer+offset,version);
+					player->PrepareIncomingMovementPacket(app->size - offset, app->pBuffer + offset, version);
 				player_pos_changed = true;
 				LogWrite(CCLIENT__PACKET, 0, "Client", "Dump/Print Packet in func: %s, line: %i", __FUNCTION__, __LINE__);
 				//DumpPacket(app);

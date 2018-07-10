@@ -1393,25 +1393,27 @@ bool ZoneServer::Process()
 		if (sync_game_time_timer.Check() && !zoneShuttingDown)
 			SendTimeUpdateToAllClients();
 
-		if(lua_interface) {
+		if(lua_interface)
 			lua_interface->Process();
 
-			/* refactor this? */
+		int hour = world.GetWorldTimeStruct()->hour;
+		int minute = world.GetWorldTimeStruct()->minute;
+
+		if (!isDusk && (hour >= 19 || hour < 8)) {//((hour > dusk_hour || hour < dawn_hour) || ((dusk_hour == hour && minute >= dusk_minute) || (hour == dawn_hour && minute < dawn_minute)))) {
+			isDusk = true;
 			const char* zone_script = world.GetZoneScript(GetZoneID());
-			if (zone_script) {
-				
-				int hour = world.GetWorldTimeStruct()->hour;
-				int minute = world.GetWorldTimeStruct()->minute;
-				
-				if (!isDusk && ((hour > dusk_hour || hour < dawn_hour) || ((dusk_hour == hour && minute >= dusk_minute) || (hour == dawn_hour && minute < dawn_minute)))) {
-					isDusk = true;
-					lua_interface->RunZoneScript(zone_script, "dusk", this);
-				}
-				else if (isDusk && ((hour > dawn_hour && hour < dusk_hour) || ((hour == dawn_hour && minute >= dawn_minute) || (hour == dusk_hour && minute < dusk_minute)))) {
-					isDusk = false;
-					lua_interface->RunZoneScript(zone_script, "dawn", this);
-				}
-			}
+			if (lua_interface && zone_script)
+				lua_interface->RunZoneScript(zone_script, "dusk", this);
+
+			ProcessSpawnConditional(SPAWN_CONDITIONAL_NIGHT);
+		}
+		else if (isDusk && hour >= 8 && hour < 19) {//((hour > dawn_hour && hour < dusk_hour) || ((hour == dawn_hour && minute >= dawn_minute) || (hour == dusk_hour && minute < dusk_minute)))) {
+			isDusk = false;
+			const char* zone_script = world.GetZoneScript(GetZoneID());
+			if (lua_interface && zone_script)
+				lua_interface->RunZoneScript(zone_script, "dawn", this);
+
+			ProcessSpawnConditional(SPAWN_CONDITIONAL_DAY);
 		}
 
 		// damaged spawns loop, spawn related, move to spawn thread?
@@ -2038,6 +2040,20 @@ Spawn* ZoneServer::ProcessSpawnLocation(SpawnLocation* spawnlocation, bool respa
 	{
 		if(spawnlocation->entities[i]->spawn_percentage == 0)
 			continue;
+
+		if (spawnlocation->conditional > 0) {
+			if ((spawnlocation->conditional & SPAWN_CONDITIONAL_DAY) == SPAWN_CONDITIONAL_DAY && isDusk)
+				continue;
+
+			if ((spawnlocation->conditional & SPAWN_CONDITIONAL_NIGHT) == SPAWN_CONDITIONAL_NIGHT && !isDusk)
+				continue;
+
+			if ((spawnlocation->conditional & SPAWN_CONDITIONAL_DAY) == SPAWN_CONDITIONAL_NOT_RAINING && rain >= 0.75f)
+				continue;
+
+			if ((spawnlocation->conditional & SPAWN_CONDITIONAL_DAY) == SPAWN_CONDITIONAL_RAINING && rain < 0.75f)
+				continue;
+		}
 
 		if(spawnlocation->entities[i]->spawn_percentage >= rand_number){
 			if(spawnlocation->entities[i]->spawn_type == SPAWN_ENTRY_TYPE_NPC)
@@ -5679,16 +5695,23 @@ void ZoneServer::SetRain(float val) {
 		client->GetPlayer()->SetCharSheetChanged(true);
 		if( val >= 0.75 && !weather_signaled )
 		{
-			weather_signaled = true;
 			client->SimpleMessage(CHANNEL_COLOR_WHITE, "It starts to rain.");
 		}
 		else if( val < 0.75 && weather_signaled ) 
 		{
-			weather_signaled = false;
 			client->SimpleMessage(CHANNEL_COLOR_WHITE, "It stops raining.");
 		}
 	}
 	MClientList.releasereadlock(__FUNCTION__, __LINE__);
+
+	if (val >= 0.75 && !weather_signaled) {
+		weather_signaled = true;
+		ProcessSpawnConditional(SPAWN_CONDITIONAL_RAINING);
+	}
+	else if (val < 0.75 && weather_signaled) {
+		weather_signaled = false;
+		ProcessSpawnConditional(SPAWN_CONDITIONAL_NOT_RAINING);
+	}
 }
 
 void ZoneServer::SetWind(float val) {
@@ -6898,4 +6921,29 @@ float ZoneServer::GetFlightPathSpeed(int32 id) {
 		speed = m_flightPaths[id]->speed;
 
 	return speed;
+}
+
+void ZoneServer::ProcessSpawnConditional(int8 condition) {
+	MSpawnLocationList.readlock(__FUNCTION__, __LINE__);
+	MSpawnList.readlock(__FUNCTION__, __LINE__);
+	map<int32, Spawn*>::iterator itr;
+	for (itr = spawn_list.begin(); itr != spawn_list.end(); itr++) {
+		SpawnLocation* loc = spawn_location_list[itr->second->GetSpawnLocationID()];
+		if (loc && loc->conditional > 0) {
+			if ((loc->conditional & condition) != condition) {
+				Despawn(itr->second, 0);
+			}
+		}
+	}
+	MSpawnList.releasereadlock(__FUNCTION__, __LINE__);
+
+	map<int32, SpawnLocation*>::iterator itr2;
+	for (itr2 = spawn_location_list.begin(); itr2 != spawn_location_list.end(); itr2++) {
+		SpawnLocation* loc = itr2->second;
+		if (loc && loc->conditional > 0 && ((loc->conditional & condition) == condition))
+			if (GetSpawnByLocationID(loc->placement_id) == NULL)
+				ProcessSpawnLocation(loc);
+	}
+	
+	MSpawnLocationList.releasereadlock(__FUNCTION__, __LINE__);
 }
