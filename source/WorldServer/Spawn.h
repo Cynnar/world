@@ -334,6 +334,7 @@ public:
 		SetPos(&appearance.pos.Dir2, dir2, updateFlags);
 	}
 	void SetHeading(float heading, bool updateFlags = true){
+		last_heading_angle = heading;
 		if (heading != 180)
 			heading = (heading - 180) * 64;
 		SetPos(&appearance.pos.Dir1, (sint16)heading, updateFlags);
@@ -990,6 +991,7 @@ private:
 	bool            req_quests_private;
 	int16           req_quests_override;
 	bool            req_quests_continued_access;
+	float			last_heading_angle;
 
 	map<string, int8>			m_tempVariableTypes;
 	map<string, int32>			m_tempVariableSpawn;

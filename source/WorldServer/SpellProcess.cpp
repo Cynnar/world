@@ -1279,6 +1279,10 @@ bool SpellProcess::CastProcessedSpell(LuaSpell* spell, bool passive){
 			target = zone->GetSpawnByID(spell->targets[i]);
 			if (!target)
 				continue;
+
+			if (client && client->IsZoning())
+				continue;
+
 			if(spell->spell->GetSpellData()->success_message.length() > 0){
 				if(client){
 					string success_message = spell->spell->GetSpellData()->success_message;

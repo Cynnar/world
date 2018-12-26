@@ -1461,10 +1461,14 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 								}
 		case COMMAND_HAIL:{
 			Spawn* spawn = client->GetPlayer()->GetTarget();
-			if(spawn && spawn->GetTargetable()){
+			if(spawn && spawn->GetTargetable())
+			{
 				char tmp[75] = {0};
+
 				sprintf(tmp, "Hail, %s", spawn->GetName());
+
 				bool show_bubble = true;
+
 				if (spawn->IsNPC())
 					show_bubble = false;
 				client->GetCurrentZone()->HandleChatMessage(client->GetPlayer(), 0, CHANNEL_SAY, tmp, HEAR_SPAWN_DISTANCE, 0, show_bubble);
@@ -1472,6 +1476,8 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 					if(spawn->IsNPC() && ((NPC*)spawn)->EngagedInCombat())
 						spawn->GetZone()->CallSpawnScript(spawn, SPAWN_SCRIPT_HAILED_BUSY, client->GetPlayer());
 					else
+						spawn->ProcessMovement();
+					LogWrite(MISC__TODO, 0, "Check", "ProcessMovement has been called");
 						spawn->GetZone()->CallSpawnScript(spawn, SPAWN_SCRIPT_HAILED, client->GetPlayer());
 				}
 			}

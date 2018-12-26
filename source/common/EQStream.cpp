@@ -466,14 +466,18 @@ void EQStream::ProcessPacket(EQProtocolPacket *p)
 			}
 			break;
 			case OP_SessionStatResponse: {
+				LogWrite(PACKET__INFO, 0, "Packet", "OP_SessionStatResponse");
 			}
 			break;
 			case OP_OutOfSession: {
+				LogWrite(PACKET__INFO, 0, "Packet", "OP_OutOfSession");
 			}
 			break;
 			default:
-				EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
-				InboundQueuePush(ap);
+				//EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
+				//InboundQueuePush(ap);
+				LogWrite(PACKET__INFO, 0, "Packet", "Received unknown packet type, disconnecting client");
+				SendDisconnect();
 				break;
 		}
 		if (OutOfOrderpackets.find(NextInSeq) != OutOfOrderpackets.end()){
@@ -571,7 +575,7 @@ void EQStream::EncryptPacket(EQ2Packet* app, int8 compress_offset, int8 offset){
 
 void EQStream::EQ2QueuePacket(EQ2Packet* app, bool attempted_combine){
 	if(CheckActive()){
-		if(app->size < 600 && !attempted_combine){
+		if(false /*app->size < 600 && !attempted_combine*/){
 			MCombineQueueLock.lock();
 			combine_queue.push_back(app);
 			MCombineQueueLock.unlock();

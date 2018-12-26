@@ -488,6 +488,7 @@ void Client::HandlePlayerRevive(int32 point_id)
 		heading = GetCurrentZone()->GetSafeHeading();
 		zone_desc = GetCurrentZone()->GetZoneDescription();
 		location_name = "Zone Safe Point";
+		Zone(GetCurrentZone()->GetZoneName(), false);
 	}
 	else
 	{
@@ -498,6 +499,7 @@ void Client::HandlePlayerRevive(int32 point_id)
 		heading = revive_point->heading;
 		zone_desc = database.GetZoneDescription(revive_point->zone_id);
 		location_name = revive_point->location_name.c_str();
+		Zone(GetCurrentZone()->GetZoneName(), false);
 	}
 
 	player->SetResurrecting(true);
@@ -506,7 +508,7 @@ void Client::HandlePlayerRevive(int32 point_id)
 	player->SetZ(z);
 	player->SetHeading(heading);
 	player->SetHP(player->GetTotalHP());
-	player->SetPower(1);
+	player->SetPower(player->GetTotalPower());
 
 	LogWrite(CCLIENT__DEBUG, 0, "Client", "Attempt Revive @ %s, %.2f, %.2f, %.2f, %.2f, HP: %i, Pow: %i, %s", 
 		zone_desc.c_str(),

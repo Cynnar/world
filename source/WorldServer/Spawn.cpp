@@ -95,6 +95,7 @@ Spawn::Spawn(){
 	m_Update.SetName("Spawn::m_Update");
 	m_requiredHistory.SetName("Spawn::m_requiredHistory");
 	m_requiredQuests.SetName("Spawn::m_requiredQuests");
+	last_heading_angle = 0.0;
 }
 
 Spawn::~Spawn(){
@@ -2190,8 +2191,10 @@ void Spawn::CalculateRunningLocation(bool stop){
 
 void Spawn::FaceTarget(float x, float z){
 	float angle;
+
 	double diff_x=x - GetX();
 	double diff_z=z - GetZ();
+
 	if(diff_z==0){
 	   if(diff_x > 0)
 		   angle = 90;
@@ -2200,12 +2203,17 @@ void Spawn::FaceTarget(float x, float z){
 	}
 	else
 		angle = ((atan(diff_x / diff_z)) * 180) / 3.14159265358979323846;
+
 	if(angle < 0)
 		angle = angle + 360;
 	else
 		angle = angle + 180;
+
 	if(diff_x < 0)
 		angle = angle + 180;
+
+	if (last_heading_angle == angle) return;
+
 	SetHeading(angle);
 }
 

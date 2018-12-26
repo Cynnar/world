@@ -700,7 +700,8 @@ int EQ2Emu_lua_FaceTarget(lua_State* state){
 	Spawn* target = lua_interface->GetSpawn(state, 2);
 	if(spawn && target){
 		if(spawn->IsEntity())
-			((Entity*)spawn)->FaceTarget(target);
+			// ((Entity*)spawn)->FaceTarget(target);
+			static_cast<Entity*>(spawn)->FaceTarget(target);
 	}
 	lua_interface->ResetFunctionStack(state);
 	return 0;
