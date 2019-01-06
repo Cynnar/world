@@ -14,9 +14,10 @@ For creating a private server
 
 ## Contributing
 
-TODO
-
-
+Jabantiz - from the svn
+Peak - pulled from his source
+Smash - when he can
+Cynnar - but not really :)
 
 ## Credit
 
