@@ -44,6 +44,7 @@ along with EQ2Emulator.  If not, see <http://www.gnu.org/licenses/>.
 #include "../Rules/Rules.h"
 #include "../AltAdvancement/AltAdvancement.h"
 #include "../RaceTypes/RaceTypes.h"
+#include "../classes.h"
 
 extern WorldDatabase database;
 extern MasterSpellList master_spell_list;
@@ -67,6 +68,7 @@ extern Chat chat;
 extern RuleManager rule_manager;
 extern MasterAAList master_aa_list;
 extern MasterRaceTypeList race_types_list;
+extern Classes classes;
 
 EQ2Packet* RemoteCommands::serialize(){
 	buffer.clear();
@@ -1693,6 +1695,12 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 				if (!client->GetPlayer()->CheckLevelStatus(new_level))
 					client->SimpleMessage(CHANNEL_COLOR_RED, "You do not have the required status to level up anymore!");
 				else {
+					if (new_level < 1)
+						new_level = 1;
+					
+					if (new_level > 255)
+						new_level = 255;
+
 					client->ChangeLevel(client->GetPlayer()->GetLevel(), new_level);
 					client->GetPlayer()->SetXP(1);
 					client->GetPlayer()->SetNeededXP();
@@ -3464,7 +3472,10 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 		case COMMAND_ANIMTEST:{
 			PacketStruct* command_packet = configReader.getStruct("WS_CannedEmote", client->GetVersion());
 			if(command_packet){
-				command_packet->setDataByName ( "spawn_id" , client->GetPlayer()->GetIDWithPlayerSpawn(client->GetPlayer()));
+				int32 id = client->GetPlayer()->GetIDWithPlayerSpawn(client->GetPlayer());
+				if (client->GetPlayer()->HasTarget())
+					id = client->GetPlayer()->GetIDWithPlayerSpawn(client->GetPlayer()->GetTarget());
+				command_packet->setDataByName ( "spawn_id" , id);
 
 				int animID = 1;
 
@@ -5675,6 +5686,34 @@ void Commands::Command_ModifyCharacter(Client* client, Seperator* sep)
 			{
 				client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify character remove gold 15");
 				
+			}
+		}
+
+		else if (strcmp(sep->arg[0], "set") == 0) {
+
+			if (strcmp(sep->arg[1], "tslevel") == 0) {
+				int8 level = atoi(sep->arg[2]);
+
+				if (level > 0 && level < 256) {
+					if (player) {
+						if (client->GetPlayer() == player)
+							client->ChangeTSLevel(player->GetTSLevel(), level);
+						else
+							player->GetZone()->GetClientBySpawn(player)->ChangeTSLevel(player->GetTSLevel(), level);
+					}
+				}
+				else
+					client->SimpleMessage(CHANNEL_ERROR, "Level must be between 1 - 255");
+			}
+
+			else if (strcmp(sep->arg[1], "tsclass") == 0) {
+				int8 tsclass = atoi(sep->arg[2]);
+
+				player->SetTradeskillClass(tsclass);
+				player->GetInfoStruct()->tradeskill_class1 = classes.GetTSBaseClass(player->GetTradeskillClass());
+				player->GetInfoStruct()->tradeskill_class2 = classes.GetSecondaryTSBaseClass(player->GetTradeskillClass());
+				player->GetInfoStruct()->tradeskill_class3 = player->GetTradeskillClass();
+				player->SetCharSheetChanged(true);
 			}
 		}
 	}
