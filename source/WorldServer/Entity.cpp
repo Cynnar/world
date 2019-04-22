@@ -849,6 +849,10 @@ void Entity::CalculateBonuses(){
 	info->strikethrough += values->strikethrough;
 	info->accuracy += values->accuracy;
 	info->offensivespeed += values->offensivespeed;
+	info->uncontested_block += values->uncontested_block;
+	info->uncontested_parry += values->uncontested_parry;
+	info->uncontested_dodge += values->uncontested_dodge;
+	info->uncontested_riposte += values->uncontested_riposte;
 	safe_delete(values);
 }
 
@@ -888,9 +892,10 @@ bool Entity::CheckSpellBonusRemoval(LuaSpell* spell, int16 type){
 	return false;
 }
 
-void Entity::AddSpellBonus(LuaSpell* spell, int16 type, sint32 value, int64 class_req){
+void Entity::AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req){
 	CheckSpellBonusRemoval(spell, type); 
 	BonusValues* bonus = new BonusValues;
+	bonus->spell_id = spell->spell->GetSpellID();
 	bonus->luaspell = spell;
 	bonus->type = type;
 	bonus->value = value;

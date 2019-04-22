@@ -444,6 +444,7 @@ public:
 	void        SendQuestRequiredSpawns(int32 quest_id);
 	void		SendHistoryRequiredSpawns(int32 event_id);
 	map<int32, Item*>* GetItemList();
+	map<int32, Item*>* GetBankItemList();
 	vector<Item*>* GetEquippedItemList();
 	Quest* SetStepComplete(int32 quest_id, int32 step);
 	Quest* AddStepProgress(int32 quest_id, int32 step, int32 progress);
@@ -674,6 +675,7 @@ public:
 	void RemoveSpellBookEntry(int32 spell_id, bool remove_passives_from_list = true);
 	int8 GetSpellSlot(int32 spell_id);
 	void				AddTitle(int32 title_id, const char *name, int8 prefix, bool save_needed = false);
+	void				AddAAEntry(int16 template_id, int8 tab_id, int32 aa_id, int16 order, int8 treeid);
 	PlayerTitlesList*	GetPlayerTitles() { return &player_titles_list; }
 	void				AddLanguage(int32 id, const char *name, bool save_needed = false);
 	PlayerLanguagesList* GetPlayerLanguages() { return &player_languages_list; }

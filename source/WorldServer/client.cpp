@@ -176,6 +176,7 @@ Client::Client(EQStream* ieqs) : pos_update(125), quest_pos_timer(2000), lua_deb
 	MQuestTimers.SetName("Client::quest_timers");
 	memset(&incoming_paperdoll, 0, sizeof(incoming_paperdoll));
 	on_auto_mount = false;
+	should_load_spells = true;
 }
 
 Client::~Client() {
@@ -304,18 +305,19 @@ void Client::SendLoginInfo() {
 		zone_list.CheckFriendList(this);
 	}
 
-	database.LoadCharacterItemList(GetAccountID(), GetCharacterID(), player);
+	database.LoadCharacterItemList(GetAccountID(), GetCharacterID(), player, GetVersion());
 	if (firstlogin && player->item_list.GetNumberOfItems() == 0 && player->GetEquipmentList()->GetNumberOfItems() == 0) //re-add starting items if missing
 	{
 		LogWrite(CCLIENT__WARNING, 0, "Client", "Player has no items - reloading starting items: '%s' (%u)", player->GetName(), GetCharacterID());
 		database.UpdateStartingItems(GetCharacterID(), player->GetAdventureClass(), player->GetRace());
-		database.LoadCharacterItemList(GetAccountID(), GetCharacterID(), player);
+		database.LoadCharacterItemList(GetAccountID(), GetCharacterID(), player, GetVersion());
 	}
 	database.LoadPlayerFactions(this);
 	database.LoadCharacterQuests(this);
 	database.LoadPlayerMail(this);
 	LogWrite(CCLIENT__DEBUG, 0, "Client", "Send Quest Journal...");
 	SendQuestJournal(true);
+	master_aa_list.DisplayAA(this, 0, 3);
 	SendCollectionList();
 	SendBiography();
 
@@ -330,8 +332,9 @@ void Client::SendLoginInfo() {
 			QueuePacket(itr->second->QuestJournalReply(version, GetNameCRC(), player));
 		}
 	}
-	//SendAchievementsList();
-
+	
+	//	SendAchievementsList();
+	
 	/*Guild* guild = player->GetGuild();
 	if (guild) {
 		guild->UpdateGuildMemberInfo(GetPlayer());
@@ -611,19 +614,17 @@ void Client::SendCharInfo(){
 	}
 
 	//SendAchievementsList();
-	ClientPacketFunctions::SendCharacterSheet ( this );
-	ClientPacketFunctions::SendTraitList(this);
+	ClientPacketFunctions::SendCharacterSheet(this);
+	ClientPacketFunctions::SendTraitList(this);// moved from below
 	//ClientPacketFunctions::SendAbilities(this);
-	master_aa_list.DisplayAA(this);
+	
 	ClientPacketFunctions::SendSkillBook(this);
-	if(!player->IsResurrecting()) {
+	if (!player->IsResurrecting()) {
 		ClientPacketFunctions::SendUpdateSpellBook(this);
-		if (!player->IsReturningFromLD())
-			player->ApplyPassiveSpells();
 	}
-	else
+	else {
 		player->SetResurrecting(false);
-
+	}
 	ClientPacketFunctions::SendLoginCommandMessages(this);
 
 	GetCurrentZone()->AddSpawn(player);
@@ -671,7 +672,7 @@ void Client::SendCharInfo(){
 	GetPlayer()->ChangeSecondaryWeapon();
 	GetPlayer()->ChangeRangedWeapon();
 	database.LoadBuyBacks(this);
-	
+	master_aa_list.DisplayAA(this, 0, 0);
 
 	string zone_motd = GetCurrentZone()->GetZoneMOTD();
 	if (zone_motd.length() > 0 && zone_motd[0] != ' ') {
@@ -1148,12 +1149,14 @@ bool Client::HandlePacket(EQApplicationPacket *app) {
 				if(GetCurrentZone()){
 					Spawn* spawn = conversation_spawns[conversation_id];
 					Item* item = conversation_items[conversation_id];
-					if(conversation_map.count(conversation_id) > 0 && conversation_map[conversation_id].count(response_index) > 0){					
-						if(spawn)
+					if (conversation_map.count(conversation_id) > 0 && conversation_map[conversation_id].count(response_index) > 0) {
+						if (spawn)
 							GetCurrentZone()->CallSpawnScript(spawn, SPAWN_SCRIPT_CONVERSATION, player, conversation_map[conversation_id][response_index].c_str());
-						else if(item && lua_interface && item->GetItemScript())
+						else if (item && lua_interface && item->GetItemScript())
 							lua_interface->RunItemScript(item->GetItemScript(), conversation_map[conversation_id][response_index].c_str(), item, player);
 					}
+					else
+						CloseDialog(conversation_id);
 				}
 				safe_delete(packet);
 			}
@@ -2214,14 +2217,18 @@ void Client::HandleExamineInfoRequest(EQApplicationPacket* app){
 		request->LoadPacketData(app->pBuffer, app->size);
 		int32 id = request->getType_int32_ByName("id");
 		int32 tier = request->getType_int32_ByName("tier");
-		int32 trait_tier = request->getType_int32_ByName("trait_tier");
+		int32 trait_tier = request->getType_int32_ByName("unknown_id");
 		//printf("Type: (%i) Tier: (%u) Unknown ID: (%u) Item ID: (%u)\n",type,tier,trait_tier,id);
+		
 		if (trait_tier != 0xFFFFFFFF){
 			spell = master_spell_list.GetSpell(id, trait_tier);
+			if (!spell) {
+				spell = master_spell_list.GetSpell(id, trait_tier +1);
+			}
 			trait_display = true;
 		}
 		else{
-			spell = master_spell_list.GetSpell(id, tier);
+			spell = master_spell_list.GetSpell(id, tier );
 			trait_display = false;
 		}
 
@@ -2343,25 +2350,28 @@ void Client::HandleExamineInfoRequest(EQApplicationPacket* app){
 	}
 	else if(type == 6){ // AA spell info
 		Spell* spell = 0;
-		AltAdvanceData* data = 0;
+		//Spell* spell2 = 0;
+		//AltAdvanceData* data = 0;
 		request = configReader.getStruct("WS_ExamineInfoRequest", GetVersion());
 		if(!request)
 			return;
 		request->LoadPacketData(app->pBuffer, app->size);
 		int32 id = request->getType_int32_ByName("id");
-		int32 tier = request->getType_int32_ByName("unique_id");
-		LogWrite(WORLD__INFO, 0, "World", "Examine Info Request->Unique ID: %u Tab ID: %u ", id, tier);
-		data = master_aa_list.GetAltAdvancement(id);
-		LogWrite(WORLD__INFO, 0, "World", "SOE Spell CRC: %u", data->spell_crc);
-		spell = master_spell_list.GetSpellByCRC(data->spell_crc);
-		//spell = master_spell_list.GetSpell(id, 1);
-		if (spell && sent_spell_details.count(spell->GetSpellID()) == 0) {
+		int32 tier = GetPlayer()->GetSpellTier(id);
+		LogWrite(WORLD__INFO, 0, "World", "Examine Info Request->Unique ID: %u Tier: %u ", id, tier);
+		//data = master_aa_list.GetAltAdvancement(id);
+		//LogWrite(WORLD__INFO, 0, "World", "SOE Spell CRC: %u", data->spell_crc);
+		//spell = master_spell_list.GetSpellByCRC(data->spell_crc);
+		spell = master_spell_list.GetSpell(id, 1);
+		//if (spell && sent_spell_details.count(spell->GetSpellID()) == 0) {
 			sent_spell_details[spell->GetSpellID()] = true;
-			EQ2Packet* app = spell->SerializeAASpell(this, data, false, GetItemPacketType(GetVersion()), 0x04);
-			DumpPacket(app);
+		//	EQ2Packet* app = spell->SerializeAASpell(this,tier, data, false, GetItemPacketType(GetVersion()), 0x04);
+			EQ2Packet* app = master_spell_list.GetAASpellPacket(id, tier, this, false, 0x4F);//0x45 change version to match client
+			/////////////////////////////////////////GetAASpellPacket(int32 id, int8 tier, Client* client, bool display, int8 packet_type) {
+			//DumpPacket(app);
 			LogWrite(WORLD__INFO, 0, "WORLD", "Examine Info Request-> Spell ID: %u", spell->GetSpellID());
 			QueuePacket(app);
-		}
+		//}
 	}
 	else{
 		LogWrite(WORLD__ERROR, 0, "World", "Unknown examine request: %i", (int)type);
@@ -2438,6 +2448,14 @@ bool Client::Process(bool zone_process) {
 
 		delete app;
 	}
+	if (GetCurrentZone() && GetCurrentZone()->GetSpawnByID(GetPlayer()->GetID()) && should_load_spells) {
+		player->ApplyPassiveSpells();
+		//database.LoadCharacterActiveSpells(player);
+		player->UnlockAllSpells(true);
+
+		should_load_spells = false;
+	}
+
 	if(quest_updates) {
 		LogWrite(CCLIENT__DEBUG, 1, "Client", "%s, ProcessQuestUpdates", __FUNCTION__, __LINE__);
 		ProcessQuestUpdates();
@@ -2733,16 +2751,20 @@ void Client::SimpleMessage(int8 color, const char* message){
 void Client::SendSpellUpdate(Spell* spell){
 	PacketStruct* packet = configReader.getStruct("WS_SpellGainedMsg", GetVersion());
 	if(packet){
-		packet->setDataByName("spell_name", spell->GetName());
+		int8 xxx = spell->GetSpellData()->is_aa;
 		packet->setDataByName("spell_type", spell->GetSpellData()->type);
+		packet->setDataByName("spell_id", spell->GetSpellID());
+		packet->setDataByName("unique_id", spell->GetSpellTier());
+		packet->setDataByName("spell_name", spell->GetName());
+		packet->setDataByName("unknown", xxx);
 		packet->setDataByName("display_spell_tier", 1);
 		packet->setDataByName("unknown3", 1);
 		packet->setDataByName("tier", spell->GetSpellTier());
-		packet->setDataByName("unknown5", 0xFFFFFFFF);
-		packet->setDataByName("spell_id", spell->GetSpellID());
-		packet->setDataByName("unique_id", spell->GetSpellTier());
 		packet->setDataByName("icon", spell->GetSpellIcon());
 		packet->setDataByName("icon_type", spell->GetSpellIconBackdrop());
+		packet->setDataByName("unknown5", 0xFFFFFFFF);
+		//packet->PrintPacket();
+		
 		EQ2Packet* outapp = packet->serialize();
 		//DumpPacket(outapp);
 		QueuePacket(outapp);
@@ -3231,6 +3253,7 @@ void Client::DetermineCharacterUpdates ( ) {
 		cdu->update_data = player->GetLevel ( );
 		loginserver.SendPacket(outpack);
 	}
+    //if(flag&CLASS_UPDATE_FLAG && player->GetLevel() >= 20)// Perseverance only
 	if(flag&CLASS_UPDATE_FLAG)
 	{
 		cdu->update_field = CLASS_UPDATE_FLAG;
@@ -4882,7 +4905,7 @@ void Client::SaveCombineSpawns(const char* name){
 
 }
 
-bool Client::AddItem(int32 item_id, int8 quantity){
+bool Client::AddItem(int32 item_id, int16 quantity){
 	Item* master_item = master_item_list.GetItem(item_id);
 	Item* item = 0;
 	if(master_item)
@@ -4930,7 +4953,7 @@ bool Client::AddItem(Item* item){
 	return true;
 }
 
-bool Client::AddItemToBank(int32 item_id, int8 quantity) {
+bool Client::AddItemToBank(int32 item_id, int16 quantity) {
 	Item* master_item = master_item_list.GetItem(item_id);
 	Item* item = 0;
 	if (master_item)
@@ -4976,7 +4999,7 @@ bool Client::AddItemToBank(Item* item) {
 
 	return true;
 }
-bool Client::RemoveItem(Item *item, int8 quantity) {
+bool Client::RemoveItem(Item *item, int16 quantity) {
 	EQ2Packet *outapp;
 	bool delete_item = false;
 
@@ -5088,7 +5111,7 @@ float Client::CalculateSellMultiplier(int32 merchant_id){
 	return 1;
 }
 
-void Client::SellItem(int32 item_id, int8 quantity, int32 unique_id){
+void Client::SellItem(int32 item_id, int16 quantity, int32 unique_id){
 	Spawn* spawn = GetMerchantTransaction();
 	Guild* guild = GetPlayer()->GetGuild();
 	if(spawn && spawn->GetMerchantID() > 0){
@@ -5153,7 +5176,7 @@ void Client::SellItem(int32 item_id, int8 quantity, int32 unique_id){
 
 }
 
-void Client::BuyBack(int32 item_id, int8 quantity){
+void Client::BuyBack(int32 item_id, int16 quantity){
 	Spawn* spawn = GetMerchantTransaction();
 	if(spawn && spawn->GetMerchantID() > 0){
 		deque<BuyBackItem*>::iterator itr;
@@ -5218,7 +5241,7 @@ void Client::BuyBack(int32 item_id, int8 quantity){
 
 }
 
-void Client::BuyItem(int32 item_id, int8 quantity){
+void Client::BuyItem(int32 item_id, int16 quantity){
 	// Get the merchant we are buying from
 	Spawn* spawn = GetMerchantTransaction();
 	// Make sure the spawn has a merchant list
@@ -5295,9 +5318,8 @@ void Client::BuyItem(int32 item_id, int8 quantity){
 
 					// Check if the player has enough status, coins and staion cash to buy the item before checking the items
 					// TODO: need to add support for station cash
-					if (player->GetInfoStruct()->status_points >= ItemInfo->price_status && player->HasCoins(ItemInfo->price_coins)) {
+					if (player->GetInfoStruct()->status_points >= ItemInfo->price_status && player->HasCoins(ItemInfo->price_coins * quantity)) {
 						// Check items
-
 						int16 item_quantity = 0;
 						// Default these to true in case price_item_id or price_item2_id was never set
 						bool hasItem1 = true;
@@ -5363,12 +5385,12 @@ void Client::BuyItem(int32 item_id, int8 quantity){
 
 
 							// Checked to see if we had enough coins already so don't need to check the return type on RemoveCoins as it will always be true
-							player->RemoveCoins(ItemInfo->price_coins);
+							player->RemoveCoins(ItemInfo->price_coins * quantity);
 							item->SetMaxSellValue(sell_price);
 							if(quantity > 1)
-								Message(CHANNEL_COLOR_MERCHANT, "You buy %i \\aITEM %u 0:%s\\/a from %s for%s.", quantity, master_item->details.item_id, master_item->name.c_str(), spawn->GetName(), GetCoinMessage(total_buy_price).c_str());
+								Message(CHANNEL_COLOR_MERCHANT, "You buy %i \\aITEM %u 0:%s\\/a from %s for%s.", quantity, master_item->details.item_id, master_item->name.c_str(), spawn->GetName(), GetCoinMessage(ItemInfo->price_coins * quantity).c_str());
 							else
-								Message(CHANNEL_COLOR_MERCHANT, "You buy \\aITEM %u 0:%s\\/a from %s for%s.", master_item->details.item_id, master_item->name.c_str(), spawn->GetName(), GetCoinMessage(total_buy_price).c_str());				
+								Message(CHANNEL_COLOR_MERCHANT, "You buy \\aITEM %u 0:%s\\/a from %s for%s.", master_item->details.item_id, master_item->name.c_str(), spawn->GetName(), GetCoinMessage(ItemInfo->price_coins * quantity).c_str());
 							AddItem(item);
 							CheckPlayerQuestsItemUpdate(item);
 							if(item && total_available < 0xFFFF){
@@ -5527,7 +5549,8 @@ void Client::SendAchievementsList()
 	safe_delete(data);
 	//DumpPacket(app);
 	QueuePacket(app);*/
-	QueuePacket(master_achievement_list.GetAchievementPacket());
+		
+	QueuePacket(master_achievement_list.GetAchievementPacket()->Copy());
 	SendAchievementUpdate(true);
 }
 
@@ -6058,7 +6081,7 @@ void Client::SendGuildCreateWindow() {
 
 }
 
-void Client::AddBuyBack(int32 unique_id, int32 item_id, int8 quantity, int32 price, bool save_needed){
+void Client::AddBuyBack(int32 unique_id, int32 item_id, int16 quantity, int32 price, bool save_needed){
 	BuyBackItem* item = new BuyBackItem;
 	item->item_id = item_id;
 	item->unique_id = unique_id;
@@ -7475,6 +7498,7 @@ void Client::AcceptCollectionRewards(Collection *collection, int32 selectable_it
 	}
 
 	collection->SetCompleted(true);
+	//update achievements for completeing collection here
 	collection->SetSaveNeeded(true);
 	SendCollectionList();
 

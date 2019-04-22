@@ -246,7 +246,7 @@ void WorldDatabase::LoadDataFromRow(DatabaseResult* result, Item* item)
 
 	item->sell_price							= result->GetInt32Str("sell_price");
 	item->sell_status							= result->GetInt32Str("sell_status_amount");
-	item->stack_count							= result->GetInt8Str("stack_count");
+	item->stack_count							= result->GetInt16Str("stack_count");
 	item->generic_info.collectable				= result->GetInt8Str("collectable");
 	item->generic_info.offers_quest_id			= result->GetInt32Str("offers_quest_id");
 	item->generic_info.part_of_quest_id			= result->GetInt32Str("part_of_quest_id");
@@ -856,7 +856,38 @@ int32 WorldDatabase::LoadItemEffects()
 	}
 	return total;
 }
+int32 WorldDatabase::LoadBookPages()
+{
+	Query query;
+	MYSQL_ROW row;
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT item_id, page, page_text, page_text_valign, page_text_halign FROM item_details_book_pages ORDER BY item_id, id");
+	int32 id = 0;
+	Item* item = 0;
+	int32 total = 0;
 
+	if (result && mysql_num_rows(result) > 0)
+	{
+		while (result && (row = mysql_fetch_row(result)))
+		{
+			if (id != atoul(row[0]))
+			{
+				id = atoul(row[0]);
+				item = master_item_list.GetItem(id);
+			}
+
+			if (item && row[1])
+			{
+				LogWrite(ITEM__DEBUG, 5, "Items", "\tBook Pages for item_id %u", id);
+				//LogWrite(ITEM__DEBUG, 5, "Items", "\tPages: '%s', Percent: %i, Sub: %i", row[1], atoi(row[2]), atoi(row[3]));
+				item->AddBookPage(atoi(row[1]), row[2], atoi(row[3]), atoi(row[4]));
+				total++;
+			}
+			else
+				LogWrite(ITEM__ERROR, 0, "Items", "Error Loading item_details_book_pages, ID: %i", id);
+		}
+	}
+	return total;
+}
 int32 WorldDatabase::LoadItemLevelOverride()
 {
 	Query query;
@@ -987,6 +1018,9 @@ void WorldDatabase::LoadItemList()
 	LogWrite(ITEM__DEBUG, 0, "Items", "Loading Item Effects...");
 	LogWrite(ITEM__DEBUG, 0, "Items", "\tLoaded %u Item Effects", LoadItemEffects());
 
+	LogWrite(ITEM__DEBUG, 0, "Items", "Loading Book Pages...");
+	LogWrite(ITEM__DEBUG, 0, "Items", "\tLoaded %u Book Pages", LoadBookPages());
+
 	LogWrite(ITEM__DEBUG, 0, "Items", "Loading Item Level Overrides...");
 	LogWrite(ITEM__DEBUG, 0, "Items", "\tLoaded %u Item Level Overrides", LoadItemLevelOverride());
 
@@ -1094,7 +1128,7 @@ void WorldDatabase::DeleteItem(int32 char_id, Item* item, const char* type)
 	}
 }
 
-void WorldDatabase::LoadCharacterItemList(int32 account_id, int32 char_id, Player* player) 
+void WorldDatabase::LoadCharacterItemList(int32 account_id, int32 char_id, Player* player, int16 version) 
 {
 	LogWrite(ITEM__DEBUG, 0, "Items", "Loading items for character '%s' (%u)", player->GetName(), char_id);
 
@@ -1144,15 +1178,39 @@ void WorldDatabase::LoadCharacterItemList(int32 account_id, int32 char_id, Playe
 				item->details.count = atoi(row[11]); //count
 				item->SetMaxSellValue(atoul(row[12])); //max sell value
 
+				
 				if(strncasecmp(row[0], "EQUIPPED", 8)==0)
 					ret = player->GetEquipmentList()->AddItem(item->details.slot_id, item);
 				else if (strncasecmp(row[0], "APPEARANCE", 10) == 2)
 					ret = player->GetEquipmentList()->AddItem(item->details.slot_id, item);
 				else {
-					if (item->details.inv_slot_id == -2)
-						player->item_list.AddOverflowItem(item);
-					else
-						player->item_list.AddItem(item);
+					if (version < 1209 & item->details.count > 255) {
+						int stacks = item->details.count / 255;
+						int8 remainder = item->details.count % 255;
+						item->details.count = remainder;
+						if (item->details.inv_slot_id == -2)
+							player->item_list.AddOverflowItem(item);
+						else
+							player->item_list.AddItem(item);
+
+
+						for (int stack = 1; stack <= stacks; stack++) {
+							item->details.count = 255;
+							item->details.inv_slot_id = -2;
+							player->item_list.AddOverflowItem(item);
+						}
+
+
+
+
+					}
+
+					else {
+						if (item->details.inv_slot_id == -2)
+							player->item_list.AddOverflowItem(item);
+						else
+							player->item_list.AddItem(item);
+					}
 				}
 			}
 			else

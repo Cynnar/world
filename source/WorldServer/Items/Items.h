@@ -512,6 +512,10 @@ extern MasterItemList master_item_list;
 #define ITEM_STAT_COMPONENT_REFUND		815
 #define ITEM_STAT_BOUNTIFUL_HARVEST		816
 
+#define ITEM_STAT_UNCONTESTED_PARRY     850
+#define ITEM_STAT_UNCONTESTED_BLOCK     851
+#define ITEM_STAT_UNCONTESTED_DODGE     852
+#define ITEM_STAT_UNCONTESTED_RIPOSTE     853
 
 #pragma pack(1)
 struct ItemStatsValues{
@@ -553,6 +557,12 @@ struct ItemStatsValues{
 	sint16			strikethrough;
 	sint16			accuracy;
 	sint16			offensivespeed;
+	float			uncontested_parry;
+	float			uncontested_block;
+	float			uncontested_dodge;
+	float			uncontested_riposte;
+
+
 };
 struct ItemCore{
 	int32	item_id;
@@ -586,8 +596,8 @@ struct ItemSet{
 	
 };
 struct Classifications{
-	int32					class_id;  //classifications MJ
-	string					class_name;
+	int32					classification_id;  //classifications MJ
+	string					classification_name;
 };
 struct ItemLevelOverride{
 	int8					adventure_class;
@@ -700,6 +710,12 @@ public:
 		EQ2_16BitString			author;
 		EQ2_16BitString			title;
 	};
+	struct Book_Info_Pages {
+		int8					page;
+		EQ2_16BitString			page_text;
+		int8					page_text_valign;
+		int8					page_text_halign;
+	};
 	struct Skill_Info{
 		int32					spell_id;
 		int32					spell_tier;
@@ -738,6 +754,12 @@ public:
 		int8					percentage;
 		int8					subbulletflag;
 	};
+	struct BookPage {
+		int8					page;
+		EQ2_16BitString			page_text;
+		int8					valign;
+		int8					halign;
+	};
 	#pragma pack()
 	Item();
 	Item(Item* in_item);
@@ -745,7 +767,7 @@ public:
 	string					lowername;
 	string					name;
 	string					description;
-	int8					stack_count;
+	int16					stack_count;
 	int32					sell_price;
 	int32					sell_status;
 	int32					max_sell_value;
@@ -762,6 +784,7 @@ public:
 	vector<ItemStatString*>	item_string_stats;
 	vector<ItemLevelOverride*> item_level_overrides;
 	vector<ItemEffect*>		item_effects;
+	vector<BookPage*>		book_pages;
 	Generic_Info			generic_info;
 	Weapon_Info*			weapon_info;
 	Ranged_Info*			ranged_info;
@@ -771,6 +794,7 @@ public:
 	Food_Info*				food_info;
 	Bauble_Info*			bauble_info;
 	Book_Info*				book_info;
+	Book_Info_Pages*		book_info_pages;
 	HouseItem_Info*			houseitem_info;
 	HouseContainer_Info*    housecontainer_info;
 	Skill_Info*				skill_info;
@@ -784,6 +808,7 @@ public:
 	string					item_script;
 
 	void AddEffect(string effect, int8 percentage, int8 subbulletflag);
+	void AddBookPage(int8 page, string page_text,int8 valign, int8 halign);
 	int32 GetMaxSellValue();
 	void SetMaxSellValue(int32 val);
 	void SetItem(Item* old_item);

@@ -39,11 +39,12 @@ void WorldDatabase::LoadAltAdvancements()
 	AltAdvanceData* data;
 
 	//MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `spell_id`, `group`, `icon`, `icon2`, `col`, `row`, `rank_cost`, `max_cost`, `rank_prereq_id`, `rank_prereq`, `class_req`, `tier`, `class_name`, `subclass_name`, `line_title` FROM spell_aa");
-	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `nodeid`, snl.spellcrc, `name`, `description`, snl.aa_list_fk, snl.icon_id, snl.icon_backdrop, `xcoord`, `ycoord`, `pointspertier`, `maxtier`, `firstparentid`, `firstparentrequiredtier`, `classification`, `classificationpointsrequired`, `pointsspentintreetounlock`, `title` FROM spell_aa_nodelist snl");
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `nodeid`,`minlevel`, `spellcrc`, `name`, `description`, `aa_list_fk`, `icon_id`, `icon_backdrop`, `xcoord`, `ycoord`, `pointspertier`, `maxtier`, `firstparentid`, `firstparentrequiredtier`, `displayedclassification`,`requiredclassification`, `classificationpointsrequired`, `pointsspentintreetounlock`, `title`,`titlelevel` FROM spell_aa_nodelist");
 	while (result && (row = mysql_fetch_row(result))) {
 		data = new AltAdvanceData;
 		int8 i = 0;
 		data->spellID = strtoul(row[0], NULL, 0);
+		data->min_level = atoi(row[++i]);
 		data->spell_crc = strtoul(row[++i], NULL, 0);
 		data->name = string(row[++i]);
 		data->description = string(row[++i]);
@@ -62,6 +63,7 @@ void WorldDatabase::LoadAltAdvancements()
 		data->req_points = atoi(row[++i]);
 		data->req_tree_points = atoi(row[++i]);
 		data->line_title = string(row[++i]);
+		data->title_level = atoi(row[++i]);
 
 		master_aa_list.AddAltAdvancement(data);
 	}
@@ -76,12 +78,25 @@ void WorldDatabase::LoadTreeNodes()
 	MYSQL_ROW row;
 	TreeNodeData* data;
 
-	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT class_id, tree_node FROM spell_aa_class_list");
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT class_id, tree_node, aa_tree_id FROM spell_aa_class_list");
 	while (result && (row = mysql_fetch_row(result))) {
 		data = new TreeNodeData;
 		data->classID = strtoul(row[0], NULL, 0);
 		data->treeID = strtoul(row[1], NULL, 0);
+		data->AAtreeID = strtoul(row[2], NULL, 0);
 		master_tree_nodes.AddTreeNode(data);
+	}
+	LogWrite(SPELL__INFO, 0, "AA", "Loaded %u AA Tree Nodes", master_tree_nodes.Size());
+}
+void WorldDatabase::LoadPlayerAA(Player *player)
+{
+	Query query;
+	MYSQL_ROW row;
+	
+
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `template_id`,`tab_id`,`aa_id`,`order`,treeid FROM character_aa where char_id = %i order by `order`",player->id);
+	while (result && (row = mysql_fetch_row(result))) {
+		
 	}
 	LogWrite(SPELL__INFO, 0, "AA", "Loaded %u AA Tree Nodes", master_tree_nodes.Size());
 }

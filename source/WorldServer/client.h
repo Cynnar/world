@@ -61,7 +61,7 @@ struct QueuedQuest{
 struct BuyBackItem{
 	int32	item_id;
 	int32	unique_id;
-	int8	quantity;
+	int16	quantity;
 	int32	price;
 	bool	save_needed;
 };
@@ -185,11 +185,11 @@ public:
 	void	BankDeposit(int64 amount);
 	Spawn*	GetBanker();
 	void	SetBanker(Spawn* in_banker);
-	bool	AddItem(int32 item_id, int8 quantity = 0);
+	bool	AddItem(int32 item_id, int16 quantity = 0);
 	bool	AddItem(Item* item);
-	bool	AddItemToBank(int32 item_id, int8 quantity = 0);
+	bool	AddItemToBank(int32 item_id, int16 quantity = 0);
 	bool	AddItemToBank(Item* item);
-	bool	RemoveItem(Item *item, int8 quantity);
+	bool	RemoveItem(Item *item, int16 quantity);
 	void	ProcessTeleport(Spawn* spawn, vector<TransportDestination*>* destinations, int32 transport_id = 0);
 	void	ProcessTeleportLocation(EQApplicationPacket* app); 
 
@@ -294,12 +294,12 @@ public:
 	void	SendGuildCreateWindow();
 	float	CalculateBuyMultiplier(int32 merchant_id);
 	float	CalculateSellMultiplier(int32 merchant_id);
-	void	BuyItem(int32 item_id, int8 quantity);
-	void	SellItem(int32 item_id, int8 quantity, int32 unique_id = 0);
-	void	BuyBack(int32 item_id, int8 quantity);
+	void	BuyItem(int32 item_id, int16 quantity);
+	void	SellItem(int32 item_id, int16 quantity, int32 unique_id = 0);
+	void	BuyBack(int32 item_id, int16 quantity);
 	void	RepairItem(int32 item_id);
 	void	RepairAllItems();
-	void	AddBuyBack(int32 unique_id, int32 item_id, int8 quantity, int32 price, bool save_needed = true);
+	void	AddBuyBack(int32 unique_id, int32 item_id, int16 quantity, int32 price, bool save_needed = true);
 	deque<BuyBackItem*>*	GetBuyBacks();
 	vector<Item*>* GetRepairableItems();
 	void	SendMailList();
@@ -466,6 +466,7 @@ private:
 
 	bool m_recipeListSent;
 	bool initial_spawns_sent;
+	bool should_load_spells;
 
 	// int32 = quest id
 	vector<int32> quest_timers;

@@ -186,6 +186,7 @@ int EQ2Emu_lua_RemoveSpawnIDAccess(lua_State* state);
 int EQ2Emu_lua_HasRecipeBook(lua_State* state);
 int EQ2Emu_lua_SpawnMove(lua_State* state);
 int EQ2Emu_lua_AddTransportSpawn(lua_State* state);
+int	EQ2Emu_lua_PerformCameraShake(lua_State* state);
 
 //Quest Stuff
 int EQ2Emu_lua_SetStepComplete(lua_State* state);

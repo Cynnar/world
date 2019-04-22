@@ -466,6 +466,16 @@ public:
 	void Command_Bot_Settings(Client* client, Seperator* sep);
 	void Command_Bot_Help(Client* client, Seperator* sep);
 
+	// AA Commands
+	void Get_AA_Xml(Client* client, Seperator* sep);
+	void Add_AA(Client* client, Seperator* sep);
+	void Commit_AA_Profile(Client* client, Seperator* sep);
+	void Begin_AA_Profile(Client* client, Seperator* sep);
+	void Back_AA(Client* client, Seperator* sep);
+	void Remove_AA(Client* client, Seperator* sep);
+	void Switch_AA_Profile(Client* client, Seperator* sep);
+	void Cancel_AA_Profile(Client* client, Seperator* sep);
+	void Save_AA_Profile(Client* client, Seperator* sep);
 private:
 	RemoteCommands* remote_commands;
 	map<string, int8> spawn_set_values;
@@ -846,6 +856,7 @@ private:
 #define COMMAND_ACCEPT_RESURRECTION     312
 #define COMMAND_DECLINE_RESURRECTION    313
 #define COMMAND_WIND					314
+#define COMMAND_READ					463
 
 #define COMMAND_BOT						500
 #define COMMAND_BOT_CREATE				501
@@ -855,6 +866,19 @@ private:
 #define COMMAND_BOT_INV					505
 #define COMMAND_BOT_SETTINGS			506
 #define COMMAND_BOT_HELP				507
+
+#define GET_AA_XML						751
+#define ADD_AA							752
+#define COMMIT_AA_PROFILE				753				
+#define BEGIN_AA_PROFILE				754
+#define BACK_AA							755
+#define REMOVE_AA						756
+#define SWITCH_AA_PROFILE				757
+#define CANCEL_AA_PROFILE				758
+#define SAVE_AA_PROFILE					759
+
+
+
 
 #define COMMAND_MODIFY				1000 // INSERT INTO `commands`(`id`,`type`,`command`,`subcommand`,`handler`,`required_status`) VALUES ( NULL,'1','modify','','1000','200'); 
 #define COMMAND_MODIFY_CHARACTER	1001

@@ -23,11 +23,13 @@
 #include "../common/Log.h"
 #include "Traits/Traits.h"
 #include "AltAdvancement/AltAdvancement.h"
+#include <math.h>
 
 extern ConfigReader configReader;
 extern WorldDatabase database;
 extern MasterTraitList master_trait_list;
 extern MasterAAList master_aa_list;
+extern MasterSpellList master_spell_list;
 
 Spell::Spell(){
 	spell = new SpellData;
@@ -65,65 +67,81 @@ Spell::~Spell(){
 	safe_delete(spell);
 }
 
-void Spell::AddSpellLuaData(int8 type, int int_value, float float_value, bool bool_value, string string_value){
+void Spell::AddSpellLuaData(int8 type, int int_value, int int_value2, float float_value, float float_value2, bool bool_value, string string_value, string string_value2, string helper){
 	LUAData* data = new LUAData;
 	data->type = type;
 	data->int_value = int_value;
+	data->int_value2 = int_value2;
 	data->float_value = float_value;
+	data->float_value2 = float_value2;
 	data->bool_value = bool_value;
 	data->string_value = string_value;
+	data->string_value2 = string_value2;
+	data->string_helper = helper;
+
 	MSpellInfo.lock();
 	lua_data.push_back(data);
 	MSpellInfo.unlock();
 }
 
-void Spell::AddSpellLuaDataInt(int value) {
+void Spell::AddSpellLuaDataInt(int value, int value2, string helper) {
 	LUAData *data = new LUAData;
 
 	data->type = 0;
 	data->int_value = value;
+	data->int_value2 = value2;
 	data->float_value = 0;
+	data->float_value2 = 0;
 	data->bool_value = false;
+	data->string_helper = helper;
 
 	MSpellInfo.lock();
 	lua_data.push_back(data);
 	MSpellInfo.unlock();
 }
 
-void Spell::AddSpellLuaDataFloat(float value) {
+void Spell::AddSpellLuaDataFloat(float value, float value2, string helper) {
 	LUAData *data = new LUAData;
 
 	data->type = 1;
 	data->int_value = 0;
+	data->int_value2 = 0;
 	data->float_value = value;
+	data->float_value2 = value2;
 	data->bool_value = false;
+	data->string_helper = helper;
 
 	MSpellInfo.lock();
 	lua_data.push_back(data);
 	MSpellInfo.unlock();
 }
 
-void Spell::AddSpellLuaDataBool(bool value) {
+void Spell::AddSpellLuaDataBool(bool value, string helper) {
 	LUAData *data = new LUAData;
 
 	data->type = 2;
 	data->int_value = 0;
 	data->float_value = 0;
 	data->bool_value = value;
+	data->string_helper = helper;
 
 	MSpellInfo.lock();
 	lua_data.push_back(data);
 	MSpellInfo.unlock();
 }
 
-void Spell::AddSpellLuaDataString(string value) {
+void Spell::AddSpellLuaDataString(string value, string value2,string helper) {
 	LUAData *data = new LUAData;
 
 	data->type = 3;
 	data->int_value = 0;
+	data->int_value2 = 0;
 	data->float_value = 0;
+	data->float_value2 = 0;
 	data->bool_value = false;
 	data->string_value = value;
+	data->string_value2 = value2;
+	data->string_helper = helper;
 
 	MSpellInfo.lock();
 	lua_data.push_back(data);
@@ -145,113 +163,562 @@ int16 Spell::GetLevelRequired(Client* client){
 	}
 	return ret;
 }
+void Spell::SetAAPacketInformation(PacketStruct* packet, AltAdvanceData* data, Client* client, bool display_tier) {
+	int8 current_tier = client->GetPlayer()->GetSpellTier(spell->id);
+	Spell* next_spell;
+	SpellData* spell2;
+	if (data->maxRank > current_tier) {
+		next_spell = master_spell_list.GetSpell(spell->id, current_tier + 1);
+		spell2 = next_spell->GetSpellData();
+	}
+	SpellDisplayEffect* effect2;
 
-void Spell::SetPacketInformation(PacketStruct* packet, Client* client, bool display_tier){
-	packet->setSubstructDataByName("spell_info", "id", spell->id);
-	packet->setSubstructDataByName("spell_info", "icon",spell->icon);
-	packet->setSubstructDataByName("spell_info", "icon2",spell->icon_heroic_op);	// fix struct element name eventually
-	packet->setSubstructDataByName("spell_info", "icontype",spell->icon_backdrop);	// fix struct element name eventually
-	
-	if (packet->GetVersion() >= 63119) {
-		packet->setSubstructDataByName("spell_info", "version", 0x04);
-		packet->setSubstructDataByName("spell_info", "sub_version", 0x24);
-	}
-	else {
-		packet->setSubstructDataByName("spell_info", "version", 0x11);
-		packet->setSubstructDataByName("spell_info", "sub_version", 0x14);
-	}
+	//next_spell->effects[1]->description;
 
-	packet->setSubstructDataByName("spell_info", "type", spell->type);
-	packet->setSubstructDataByName("spell_info", "unknown_MJ1d", 1); //63119 test
-	packet->setSubstructDataByName("spell_info", "class_skill", spell->class_skill);
-	packet->setSubstructDataByName("spell_info", "mastery_skill", spell->mastery_skill);
-	packet->setSubstructDataByName("spell_info", "duration_flag", spell->duration_until_cancel);
-	if(client && spell->type != 2){
-		sint8 spell_text_color = client->GetPlayer()->GetArrowColor(GetLevelRequired(client));
-		if(spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
-			spell_text_color = ARROW_COLOR_WHITE;
-		spell_text_color -= 6;
-		if(spell_text_color < 0)
-			spell_text_color*=-1;
-		packet->setSubstructDataByName("spell_info", "spell_text_color", spell_text_color);
-	}
-	else
-		packet->setSubstructDataByName("spell_info", "spell_text_color", 3);
-	if(spell->type != 2){
-		packet->setSubstructArrayLengthByName("spell_info", "num_levels", levels.size());
-		for(int32 i=0;i<levels.size();i++){
-			packet->setArrayDataByName("adventure_class", levels[i]->adventure_class, i);
-			packet->setArrayDataByName("tradeskill_class", levels[i]->tradeskill_class, i);
-			packet->setArrayDataByName("spell_level", levels[i]->spell_level, i);
-		}
-	}
-	packet->setSubstructDataByName("spell_info", "unknown9", 20);
+
+	int xxx = 0;
+
 	int16 hp_req = 0;
 	int16 power_req = 0;
-	if (client) {
-		hp_req = GetHPRequired(client->GetPlayer());
-		power_req = GetPowerRequired(client->GetPlayer());
 
-		// might need version checks around these?
-		if( client->GetVersion() >= 1193 )
-		{
-			int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
-			packet->setSubstructDataByName("spell_info", "savagery_req",savagery_req);
-			packet->setSubstructDataByName("spell_info", "savagery_upkeep",spell->savagery_upkeep);
+	if (current_tier > 0) {
+		packet->setSubstructDataByName("spell_info", "current_id", spell->id);
+		packet->setSubstructDataByName("spell_info", "current_icon", spell->icon);
+		packet->setSubstructDataByName("spell_info", "current_icon2", spell->icon_heroic_op);	// fix struct element name eventually
+		packet->setSubstructDataByName("spell_info", "current_icontype", spell->icon_backdrop);	// fix struct element name eventually
+
+		if (packet->GetVersion() >= 63119) {
+			packet->setSubstructDataByName("spell_info", "current_version", 0x04);
+			packet->setSubstructDataByName("spell_info", "current_sub_version", 0x24);
 		}
-		if( client->GetVersion() >= 57048 )
-		{
-			int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
-			packet->setSubstructDataByName("spell_info", "dissonance_req",dissonance_req);
-			packet->setSubstructDataByName("spell_info", "dissonance_upkeep",spell->dissonance_upkeep);
+		else if (packet->GetVersion() >= 58617) {
+			packet->setSubstructDataByName("spell_info", "current_version", 0x03);
+			packet->setSubstructDataByName("spell_info", "current_sub_version", 0x131A);
 		}
-	}
-	packet->setSubstructDataByName("spell_info", "target", spell->target_type);
-	packet->setSubstructDataByName("spell_info", "recovery",spell->recovery);
-	packet->setSubstructDataByName("spell_info", "health_upkeep",spell->hp_upkeep);
-	packet->setSubstructDataByName("spell_info", "health_req",hp_req);
-	packet->setSubstructDataByName("spell_info", "tier",spell->tier);
-	packet->setSubstructDataByName("spell_info", "power_req",power_req);
-	packet->setSubstructDataByName("spell_info", "power_upkeep",spell->power_upkeep);
+		else {
+			packet->setSubstructDataByName("spell_info", "current_version", 0x00);
+			packet->setSubstructDataByName("spell_info", "current_sub_version", 0xD9);
+		}
 
-	packet->setSubstructDataByName("spell_info", "cast_time",spell->cast_time);
-	packet->setSubstructDataByName("spell_info", "recast",spell->recast);
-	packet->setSubstructDataByName("spell_info", "radius",spell->radius);
-	packet->setSubstructDataByName("spell_info", "req_concentration",spell->req_concentration);
-	//packet->setDataByName("req_concentration2", 2);
-	packet->setSubstructDataByName("spell_info", "max_aoe_targets",spell->max_aoe_targets);
-	packet->setSubstructDataByName("spell_info", "friendly_spell",spell->friendly_spell);
-	packet->setSubstructArrayLengthByName("spell_info", "num_effects", effects.size());
-	for(int32 i=0;i<effects.size();i++){
-		packet->setArrayDataByName("effect", effects[i]->description.c_str(), i);
-		packet->setArrayDataByName("percentage", effects[i]->percentage, i);
-		packet->setArrayDataByName("subbulletflag", effects[i]->subbullet, i);
-	}
-	if(display_tier == true)
-		packet->setSubstructDataByName("spell_info", "display_spell_tier", spell->display_spell_tier);
-	else
-		packet->setSubstructDataByName("spell_info", "display_spell_tier", 0);
-	packet->setSubstructDataByName("spell_info", "range",spell->range);
-	packet->setSubstructDataByName("spell_info", "duration1",spell->duration1);
-	packet->setSubstructDataByName("spell_info", "duration2",spell->duration2);
+		packet->setSubstructDataByName("spell_info", "current_type", spell->type);
+		packet->setSubstructDataByName("spell_info", "unknown_MJ1d", 1); //63119 test
+		packet->setSubstructDataByName("spell_info", "current_class_skill", spell->class_skill);
+		packet->setSubstructDataByName("spell_info", "current_mastery_skill", spell->mastery_skill);
+		packet->setSubstructDataByName("spell_info", "duration_flag", spell->duration_until_cancel);
 
-	packet->setSubstructDataByName("spell_info", "can_effect_raid",spell->can_effect_raid);
-	packet->setSubstructDataByName("spell_info", "affect_only_group_members",spell->affect_only_group_members);
-	packet->setSubstructDataByName("spell_info", "group_spell",spell->group_spell);
-	packet->setSubstructDataByName("spell_info", "resistibility",spell->resistibility);
-	packet->setSubstructDataByName("spell_info", "name",&(spell->name));
-	packet->setSubstructDataByName("spell_info", "description",&(spell->description));
+
+		if (client && spell->type != 2) {
+			sint8 spell_text_color = client->GetPlayer()->GetArrowColor(GetLevelRequired(client));
+			if (spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
+				spell_text_color = ARROW_COLOR_WHITE;
+			spell_text_color -= 6;
+			if (spell_text_color < 0)
+				spell_text_color *= -1;
+			packet->setSubstructDataByName("spell_info", "current_spell_text_color", (xxx == 1 ? 0xFFFFFFFF : spell_text_color));
+		}
+		else {
+			packet->setSubstructDataByName("spell_info", "current_spell_text_color", (xxx == 1 ? 0xFFFFFFFF : 3));
+		}
+		packet->setSubstructDataByName("spell_info", "current_spell_text_color", (xxx == 1 ? 0xFFFFFFFF : 3));
+		packet->setSubstructDataByName("spell_info", "current_tier", (spell->tier));
+
+		if (spell->type != 2) {
+			packet->setArrayLengthByName("current_num_levels", 0);
+			for (int32 i = 0; i < levels.size(); i++) {
+				packet->setArrayDataByName("spell_info_aa_adventure_class", levels[i]->adventure_class, i);
+				packet->setArrayDataByName("spell_info_aa_tradeskill_class", levels[i]->tradeskill_class, i);
+				packet->setArrayDataByName("spell_info_aa_spell_level", levels[i]->spell_level, i);
+			}
+		}
+		//packet->setSubstructDataByName("spell_info","unknown9", 20);
+
+		if (client) {
+			hp_req = GetHPRequired(client->GetPlayer());
+			power_req = GetPowerRequired(client->GetPlayer());
+
+			// might need version checks around these?
+			if (client->GetVersion() >= 1193)
+			{
+				int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "current_savagery_req", savagery_req);
+				packet->setSubstructDataByName("spell_info", "current_savagery_upkeep", spell->savagery_upkeep);
+			}
+			if (client->GetVersion() >= 57048)
+			{
+				int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "dissonance_req", dissonance_req);
+				packet->setSubstructDataByName("spell_info", "dissonance_upkeep", spell->dissonance_upkeep);
+			}
+		}
+		packet->setSubstructDataByName("spell_info", "current_health_req", hp_req);
+		packet->setSubstructDataByName("spell_info", "current_health_upkeep", spell->hp_upkeep);
+		packet->setSubstructDataByName("spell_info", "current_power_req", power_req);
+		packet->setSubstructDataByName("spell_info", "current_power_upkeep", spell->power_upkeep);
+		packet->setSubstructDataByName("spell_info", "current_req_concentration", spell->req_concentration);
+		//unknown1 savagery???
+		packet->setSubstructDataByName("spell_info", "current_cast_time", spell->cast_time);
+		packet->setSubstructDataByName("spell_info", "current_recovery", spell->recovery);
+		packet->setSubstructDataByName("spell_info", "current_recast", spell->recast);
+		packet->setSubstructDataByName("spell_info", "current_radius", spell->radius);
+		packet->setSubstructDataByName("spell_info", "current_max_aoe_targets", spell->max_aoe_targets);
+		packet->setSubstructDataByName("spell_info", "current_friendly_spell", spell->friendly_spell);
+		// rumber of reagents with array
+
+
+
+
+
+
+
+
+
+		packet->setSubstructArrayLengthByName("spell_info", "current_num_effects", (xxx == 1 ? 0 : effects.size()));
+		for (int32 i = 0; i < effects.size(); i++) {
+			packet->setArrayDataByName("current_subbulletflag", effects[i]->subbullet, i);
+			string effect_message;
+			if (effects[i]->description.length() > 0) {
+				effect_message = effects[i]->description;
+				if (effect_message.find("%LM") < 0xFFFFFFFF) {
+					int string_index = effect_message.find("%LM");
+					int data_index = stoi(effect_message.substr(string_index + 3, 2));
+					float value = lua_data[data_index]->float_value * client->GetPlayer()->GetLevel();
+					string strValue = to_string(value);
+					strValue.erase(strValue.find_last_not_of('0') + 1, std::string::npos);
+					effect_message.replace(effect_message.find("%LM"), 5, strValue);
+				}
+				// Magic damage min
+				if (effect_message.find("%DML") < 0xFFFFFFFF) {
+					int string_index = effect_message.find("%DML");
+					int data_index = stoi(effect_message.substr(string_index+4, 2));
+					int32 value = lua_data[data_index]->int_value;
+										
+					value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+					int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+					value += mod;
+					string damage = to_string(value);
+					damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+					effect_message.replace(effect_message.find("%DML"), 6, damage);
+				}
+				// Magic damage max
+				if (effect_message.find("%DMH") < 0xFFFFFFFF) {
+					int string_index = effect_message.find("%DMH");
+					int data_index = stoi(effect_message.substr(string_index+4, 2));
+					int32 value = lua_data[data_index]->int_value;
+					value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+					int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+					value += mod;
+					string damage = to_string(value);
+					damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+					effect_message.replace(effect_message.find("%DMH"), 6, damage);
+				}
+				// level based Magic damage min
+				if (effect_message.find("%LDML") < 0xFFFFFFFF) {
+					int string_index = effect_message.find("%LDML");
+					int data_index = stoi(effect_message.substr(string_index+5, 2));
+					int32 value = lua_data[data_index]->int_value * client->GetPlayer()->GetLevel();
+
+					value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+					int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+					value += mod;
+					string damage = to_string(value);
+					damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+					effect_message.replace(effect_message.find("%LDML"), 7, damage);
+				}
+				// level based Magic damage max
+				if (effect_message.find("%LDMH") < 0xFFFFFFFF) {
+					int string_index = effect_message.find("%LDMH");
+					int data_index = stoi(effect_message.substr(string_index+5, 2));
+					int32 value = lua_data[data_index]->int_value * client->GetPlayer()->GetLevel();
+					value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+					int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+					value += mod;
+					string damage = to_string(value);
+					damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+					effect_message.replace(effect_message.find("%LDMH"), 7, damage);
+				}
+				//GetZone()->SimpleMessage(CHANNEL_COLOR_SPELL_EFFECT, effect_message.c_str(), victim, 50);
+			}
+
+
+
+
+
+			packet->setArrayDataByName("current_effect", effect_message.c_str(), i);
+			packet->setArrayDataByName("current_percentage", effects[i]->percentage, i);
+		}
+		if (display_tier == true)
+			packet->setSubstructDataByName("spell_info", "current_display_spell_tier", 1);// spell2->display_spell_tier);
+		else
+			packet->setSubstructDataByName("spell_info", "current_display_spell_tier", 1);// 0);
+
+		packet->setSubstructDataByName("spell_info", "current_unknown_1", 1);// 0);
+		//unkown1_1
+		packet->setSubstructDataByName("spell_info", "current_minimum_range", spell->min_range);
+		packet->setSubstructDataByName("spell_info", "current_range", spell->range);
+		packet->setSubstructDataByName("spell_info", "current_duration_1", spell->duration1);
+		packet->setSubstructDataByName("spell_info", "current_duration_2", spell->duration2);
+
+		packet->setSubstructDataByName("spell_info", "current_duration_flag", spell->duration_until_cancel);
+		packet->setSubstructDataByName("spell_info", "current_target", spell->target_type);
+
+
+
+
+
+		packet->setSubstructDataByName("spell_info", "current_can_effect_raid", spell->can_effect_raid);
+		packet->setSubstructDataByName("spell_info", "current_affect_only_group_members", spell->affect_only_group_members);
+		packet->setSubstructDataByName("spell_info", "current_group_spell", spell->group_spell);
+		packet->setSubstructDataByName("spell_info", "current_resistibility", spell->resistibility);
+		packet->setSubstructDataByName("spell_info", "current_name", &(spell->name));
+		packet->setSubstructDataByName("spell_info", "current_description", &(spell->description));
+
+	}
+
+	if (current_tier + 1 <= data->maxRank) {
+		packet->setSubstructDataByName("spell_info", "next_id", spell2->id);
+		packet->setSubstructDataByName("spell_info", "next_icon", spell2->icon);
+		packet->setSubstructDataByName("spell_info", "next_icon2", spell2->icon_heroic_op);	// fix struct element name eventually
+		packet->setSubstructDataByName("spell_info", "next_icontype", spell2->icon_backdrop);	// fix struct element name eventually
+
+		if (packet->GetVersion() >= 63119) {
+			packet->setSubstructDataByName("spell_info", "next_aa_spell_info2", "version", 0x04);
+			packet->setSubstructDataByName("spell_info", "next_aa_spell_info2", "sub_version", 0x24);
+		}
+		else if (packet->GetVersion() >= 58617) {
+			packet->setSubstructDataByName("spell_info", "next_version", 0x03);
+			packet->setSubstructDataByName("spell_info", "next_sub_version", 0x131A);
+		}
+		else {
+			packet->setSubstructDataByName("spell_info", "next_version", 0x00);
+			packet->setSubstructDataByName("spell_info", "next_sub_version", 0xD9);
+		}
+
+		packet->setSubstructDataByName("spell_info", "next_type", spell2->type);
+		packet->setSubstructDataByName("spell_info", "next_unknown_MJ1d", 1); //63119 test
+		packet->setSubstructDataByName("spell_info", "next_class_skill", spell2->class_skill);
+		packet->setSubstructDataByName("spell_info", "next_mastery_skill", spell2->mastery_skill);
+		packet->setSubstructDataByName("spell_info", "next_duration_flag", spell2->duration_until_cancel);
+		if (client && spell->type != 2) {
+			sint8 spell_text_color = client->GetPlayer()->GetArrowColor(GetLevelRequired(client));
+			if (spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
+				spell_text_color = ARROW_COLOR_WHITE;
+			spell_text_color -= 6;
+			if (spell_text_color < 0)
+				spell_text_color *= -1;
+			packet->setSubstructDataByName("spell_info", "next_spell_text_color", spell_text_color);
+		}
+		else
+			packet->setSubstructDataByName("spell_info", "next_spell_text_color", 3);
+		if (spell->type != 2) {
+			packet->setArrayLengthByName("num_levels", levels.size());
+			for (int32 i = 0; i < levels.size(); i++) {
+				packet->setArrayDataByName("spell_info_aa_adventure_class2", levels[i]->adventure_class, i);
+				packet->setArrayDataByName("spell_info_aa_tradeskill_class2", levels[i]->tradeskill_class, i);
+				packet->setArrayDataByName("spell_info_aa_spell_level2", levels[i]->spell_level, i);
+			}
+		}
+		//packet->setSubstructDataByName("spell_info","unknown9", 20);
+		hp_req = 0;
+		power_req = 0;
+		if (client) {
+			hp_req = GetHPRequired(client->GetPlayer());
+			power_req = GetPowerRequired(client->GetPlayer());
+
+			// might need version checks around these?
+			if (client->GetVersion() >= 1193)
+			{
+				int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "next_savagery_req", savagery_req);
+				packet->setSubstructDataByName("spell_info", "next_savagery_upkeep", spell->savagery_upkeep);
+			}
+			if (client->GetVersion() >= 57048)
+			{
+				int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "next_dissonance_req", dissonance_req);
+				packet->setSubstructDataByName("spell_info", "next_dissonance_upkeep", spell->dissonance_upkeep);
+			}
+		}
+		packet->setSubstructDataByName("spell_info", "next_target", spell->target_type);
+		packet->setSubstructDataByName("spell_info", "next_recovery", spell->recovery);
+		packet->setSubstructDataByName("spell_info", "next_health_upkeep", spell->hp_upkeep);
+		packet->setSubstructDataByName("spell_info", "next_health_req", hp_req);
+		packet->setSubstructDataByName("spell_info", "next_tier", spell->tier);
+		packet->setSubstructDataByName("spell_info", "next_power_req", power_req);
+		packet->setSubstructDataByName("spell_info", "next_power_upkeep", spell->power_upkeep);
+
+		packet->setSubstructDataByName("spell_info", "next_cast_time", spell->cast_time);
+		packet->setSubstructDataByName("spell_info", "next_recast", spell->recast);
+		packet->setSubstructDataByName("spell_info", "next_radius", spell->radius);
+		packet->setSubstructDataByName("spell_info", "next_req_concentration", spell->req_concentration);
+		//packet->setSubstructDataByName("spell_info","req_concentration2", 2);
+		packet->setSubstructDataByName("spell_info", "next_max_aoe_targets", spell->max_aoe_targets);
+		packet->setSubstructDataByName("spell_info", "next_friendly_spell", spell->friendly_spell);
+		packet->setSubstructArrayLengthByName("spell_info", "next_num_effects", next_spell->effects.size());
+		for (int32 i = 0; i < next_spell->effects.size(); i++) {
+			packet->setArrayDataByName("next_subbulletflag", next_spell->effects[i]->subbullet, i);
+			string effect_message;
+				if (next_spell->effects[i]->description.length() > 0) {
+					effect_message = next_spell->effects[i]->description;
+					if (effect_message.find("%LM") < 0xFFFFFFFF) {
+						int string_index = effect_message.find("%LM");
+						int data_index = stoi(effect_message.substr(string_index + 3, 2));
+						float value = next_spell->lua_data[data_index]->float_value * client->GetPlayer()->GetLevel();
+						string strValue = to_string(value);
+						strValue.erase(strValue.find_last_not_of('0') + 1, std::string::npos);
+						effect_message.replace(effect_message.find("%LM"), 5, strValue);
+					}
+					// Magic damage min
+					if (effect_message.find("%DML") < 0xFFFFFFFF) {
+						int string_index = effect_message.find("%DML");
+						int data_index = stoi(effect_message.substr(string_index + 4, 2));
+						int32 value = next_spell->lua_data[data_index]->int_value;
+
+						value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+						int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+						value += mod;
+						string damage = to_string(value);
+						damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+						effect_message.replace(effect_message.find("%DML"), 6, damage);
+					}
+					// Magic damage max
+					if (effect_message.find("%DMH") < 0xFFFFFFFF) {
+						int string_index = effect_message.find("%DMH");
+						int data_index = stoi(effect_message.substr(string_index + 4, 2));
+						int32 value = next_spell->lua_data[data_index]->int_value;
+						value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+						int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+						value += mod;
+						string damage = to_string(value);
+						damage.erase(damage.find_last_not_of('0') + 1, std::string::npos);
+						effect_message.replace(effect_message.find("%DMH"), 6, damage);
+					}
+					// level based Magic damage min
+					if (effect_message.find("%LDML") < 0xFFFFFFFF) {
+						int string_index = effect_message.find("%LDML");
+						int data_index = stoi(effect_message.substr(string_index + 5, 2));
+						int32 value = next_spell->lua_data[data_index]->int_value * client->GetPlayer()->GetLevel();
+
+						value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+						int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+						value += mod;
+						string damage = to_string(value);
+						effect_message.replace(effect_message.find("%LDML"), 7, damage);
+					}
+					// level based Magic damage max
+					if (effect_message.find("%LDMH") < 0xFFFFFFFF) {
+						int string_index = effect_message.find("%LDMH");
+						int data_index = stoi(effect_message.substr(string_index + 5, 2));
+						int32 value = next_spell->lua_data[data_index]->int_value * client->GetPlayer()->GetLevel();
+						value *= ((client->GetPlayer()->GetInfoStruct()->potency / 100) + 1);
+						int32 mod = (int32)min(client->GetPlayer()->GetInfoStruct()->ability_modifier, (float)(value / 2));
+						value += mod;
+						string damage = to_string(value);
+						effect_message.replace(effect_message.find("%LDMH"), 7, damage);
+					}
+					//GetZone()->SimpleMessage(CHANNEL_COLOR_SPELL_EFFECT, effect_message.c_str(), victim, 50);
+				}
+
+
+
+			packet->setArrayDataByName("next_effect", effect_message.c_str(), i);
+			packet->setArrayDataByName("next_percentage", next_spell->effects[i]->percentage, i);
+
+		}
+		if (display_tier == true)
+			packet->setSubstructDataByName("spell_info", "next_display_spell_tier", 1);// spell->display_spell_tier);
+		else
+			packet->setSubstructDataByName("spell_info", "next_display_spell_tier", 1);//0
+		packet->setSubstructDataByName("spell_info", "next_unknown_1", 1);//0
+		packet->setSubstructDataByName("spell_info", "next_range", spell2->range);
+		packet->setSubstructDataByName("spell_info", "next_duration_1", spell2->duration1);
+		packet->setSubstructDataByName("spell_info", "next_duration_2", spell2->duration2);
+
+		packet->setSubstructDataByName("spell_info", "next_can_effect_raid", spell2->can_effect_raid);
+		packet->setSubstructDataByName("spell_info", "next_affect_only_group_members", spell2->affect_only_group_members);
+		packet->setSubstructDataByName("spell_info", "next_group_spell", spell2->group_spell);
+		packet->setSubstructDataByName("spell_info", "next_resistibility", spell2->resistibility);
+		packet->setSubstructDataByName("spell_info", "next_name", &(spell2->name));
+		packet->setSubstructDataByName("spell_info", "next_description", &(spell2->description));
+	
+	}
 }
+	void Spell::SetPacketInformation(PacketStruct* packet, Client* client, bool display_tier) {
+		packet->setSubstructDataByName("spell_info", "id", spell->id);
+		packet->setSubstructDataByName("spell_info", "icon", spell->icon);
+		packet->setSubstructDataByName("spell_info", "icon2", spell->icon_heroic_op);	// fix struct element name eventually
+		packet->setSubstructDataByName("spell_info", "icontype", spell->icon_backdrop);	// fix struct element name eventually
 
+		if (packet->GetVersion() >= 63119) {
+			packet->setSubstructDataByName("spell_info", "version", 0x04);
+			packet->setSubstructDataByName("spell_info", "sub_version", 0x24);
+		}
+		else if (packet->GetVersion() >= 60114) {
+			packet->setSubstructDataByName("spell_info", "version", 0x03);
+			packet->setSubstructDataByName("spell_info", "sub_version", 4890);
+		}
+		else {
+			packet->setSubstructDataByName("spell_info", "version", 0x11);
+			packet->setSubstructDataByName("spell_info", "sub_version", 0x14);
+		}
+
+		packet->setSubstructDataByName("spell_info", "type", spell->type);
+		packet->setSubstructDataByName("spell_info", "unknown_MJ1d", 1); //63119 test
+		packet->setSubstructDataByName("spell_info", "class_skill", spell->class_skill);
+		packet->setSubstructDataByName("spell_info", "mastery_skill", spell->mastery_skill);
+		packet->setSubstructDataByName("spell_info", "duration_flag", spell->duration_until_cancel);
+		if (client && spell->type != 2) {
+			sint8 spell_text_color = client->GetPlayer()->GetArrowColor(GetLevelRequired(client));
+			if (spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
+				spell_text_color = ARROW_COLOR_WHITE;
+			spell_text_color -= 6;
+			if (spell_text_color < 0)
+				spell_text_color *= -1;
+			packet->setSubstructDataByName("spell_info", "spell_text_color", spell_text_color);
+		}
+		else
+			packet->setSubstructDataByName("spell_info", "spell_text_color", 3);
+		if (spell->type != 2) {
+			packet->setSubstructArrayLengthByName("spell_info", "num_levels", levels.size());
+			for (int32 i = 0; i < levels.size(); i++) {
+				packet->setArrayDataByName("adventure_class", levels[i]->adventure_class, i);
+				packet->setArrayDataByName("tradeskill_class", levels[i]->tradeskill_class, i);
+				packet->setArrayDataByName("spell_level", levels[i]->spell_level, i);
+			}
+		}
+		packet->setSubstructDataByName("spell_info", "unknown9", 20);
+		int16 hp_req = 0;
+		int16 power_req = 0;
+		if (client) {
+			hp_req = GetHPRequired(client->GetPlayer());
+			power_req = GetPowerRequired(client->GetPlayer());
+
+			// might need version checks around these?
+			if (client->GetVersion() >= 1193)
+			{
+				int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "savagery_req", savagery_req);
+				packet->setSubstructDataByName("spell_info", "savagery_upkeep", spell->savagery_upkeep);
+			}
+			if (client->GetVersion() >= 57048)
+			{
+				int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
+				packet->setSubstructDataByName("spell_info", "dissonance_req", dissonance_req);
+				packet->setSubstructDataByName("spell_info", "dissonance_upkeep", spell->dissonance_upkeep);
+			}
+		}
+		packet->setSubstructDataByName("spell_info", "target", spell->target_type);
+		packet->setSubstructDataByName("spell_info", "recovery", spell->recovery);
+		packet->setSubstructDataByName("spell_info", "health_upkeep", spell->hp_upkeep);
+		packet->setSubstructDataByName("spell_info", "health_req", hp_req);
+		packet->setSubstructDataByName("spell_info", "tier", spell->tier);
+		packet->setSubstructDataByName("spell_info", "power_req", power_req);
+		packet->setSubstructDataByName("spell_info", "power_upkeep", spell->power_upkeep);
+
+		packet->setSubstructDataByName("spell_info", "cast_time", spell->cast_time);
+		packet->setSubstructDataByName("spell_info", "recast", spell->recast);
+		packet->setSubstructDataByName("spell_info", "radius", spell->radius);
+		packet->setSubstructDataByName("spell_info", "req_concentration", spell->req_concentration);
+		//packet->setSubstructDataByName("spell_info","req_concentration2", 2);
+		packet->setSubstructDataByName("spell_info", "max_aoe_targets", spell->max_aoe_targets);
+		packet->setSubstructDataByName("spell_info", "friendly_spell", spell->friendly_spell);
+		packet->setSubstructArrayLengthByName("spell_info", "num_effects", effects.size());
+		for (int32 i = 0; i < effects.size(); i++) {
+			packet->setArrayDataByName("effect", effects[i]->description.c_str(), i);
+			packet->setArrayDataByName("percentage", effects[i]->percentage, i);
+			packet->setArrayDataByName("subbulletflag", effects[i]->subbullet, i);
+		}
+		if (display_tier == true)
+			packet->setSubstructDataByName("spell_info", "display_spell_tier", spell->display_spell_tier);
+		else
+			packet->setSubstructDataByName("spell_info", "display_spell_tier", 0);
+		packet->setSubstructDataByName("spell_info", "range", spell->range);
+		packet->setSubstructDataByName("spell_info", "duration1", spell->duration1);
+		packet->setSubstructDataByName("spell_info", "duration2", spell->duration2);
+
+		packet->setSubstructDataByName("spell_info", "can_effect_raid", spell->can_effect_raid);
+		packet->setSubstructDataByName("spell_info", "affect_only_group_members", spell->affect_only_group_members);
+		packet->setSubstructDataByName("spell_info", "group_spell", spell->group_spell);
+		packet->setSubstructDataByName("spell_info", "resistibility", spell->resistibility);
+		packet->setSubstructDataByName("spell_info", "name", &(spell->name));
+		packet->setSubstructDataByName("spell_info", "description", &(spell->description));
+		packet->PrintPacket();
+}
 EQ2Packet* Spell::SerializeSpecialSpell(Client* client, bool display, int8 packet_type, int8 sub_packet_type){
 	return SerializeSpell(client, display, false, packet_type, sub_packet_type, "WS_ExamineSpecialSpellInfo");
 }
 
-EQ2Packet* Spell::SerializeAASpell(Client* client, AltAdvanceData* data, bool display, int16 packet_type, int8 sub_packet_type){
+EQ2Packet* Spell::SerializeAASpell(Client* client,int8 tier, AltAdvanceData* data, bool display, bool trait_display, int8 packet_type, int8 sub_packet_type, const char* struct_name){
 	if (!client)
 		return 0;
+	int16 version = 1;
+	if (client)
+		version = client->GetVersion();
+	if (!struct_name)
+		struct_name = "WS_ExamineAASpellInfo";
+	PacketStruct* packet = configReader.getStruct(struct_name, version);
+	if (display)
+		packet->setSubstructDataByName("info_header", "show_name", 1);//1
+	else
+		if (!trait_display)
+			packet->setSubstructDataByName("info_header", "show_popup", 1);//1
+		else
+			packet->setSubstructDataByName("info_header", "show_popup", 0);
 
-	PacketStruct* packet = configReader.getStruct("WS_ExamineAASpellInfo", client->GetVersion());
+	if (packet_type > 0)
+		packet->setSubstructDataByName("info_header", "packettype", packet_type * 256 + 0xFE);
+	else
+		packet->setSubstructDataByName("info_header", "packettype", 0x4FFE);// 0x45FE    GetItemPacketType(version));
+	//packet->setDataByName("unknown2",5);
+	//packet->setDataByName("unknown7", 1);
+	//packet->setDataByName("unknown9", 20);
+	//packet->setDataByName("unknown10", 1, 2);
+	if (sub_packet_type == 0)
+		sub_packet_type = 0x83;
+	packet->setSubstructDataByName("info_header", "packetsubtype", 4);// sub_packet_type);
+	packet->setSubstructDataByName("spell_info", "aa_id", data->spellID);
+	packet->setSubstructDataByName("spell_info", "aa_tab_id", data->group);
+	packet->setSubstructDataByName("spell_info", "aa_icon", data->icon);
+	packet->setSubstructDataByName("spell_info", "aa_icon2", data->icon2);
+	packet->setSubstructDataByName("spell_info", "aa_current_rank", tier); // how to get this info to here?
+	packet->setSubstructDataByName("spell_info", "aa_max_rank", data->maxRank);
+	packet->setSubstructDataByName("spell_info", "aa_rank_cost", data->rankCost);
+	packet->setSubstructDataByName("spell_info", "aa_unknown_2", 20);
+	packet->setSubstructDataByName("spell_info", "aa_name", &(spell->name));
+	packet->setSubstructDataByName("spell_info", "aa_description", &(spell->description));
+
+
+
+
+	//packet->setDataByName("unknown3",2);
+	//packet->setDataByName("unknown7", 50);
+	if (sub_packet_type == 0x81)
+		SetAAPacketInformation(packet, data, client);
+	else
+		SetAAPacketInformation(packet,data, client, true);
+	packet->setSubstructDataByName("spell_info", "uses_remaining", 0xFFFF);
+	packet->setSubstructDataByName("spell_info", "damage_remaining", 0xFFFF);
+	//packet->PrintPacket();
+	// This adds the second portion to the spell packet. Could be used for bonuses etc.?
+	string* data1 = packet->serializeString();
+	uchar*  data2 = (uchar*)data1->c_str();
+	uchar*  ptr2 = data2;
+	int32 size = data1->length();// *2;
+	////uchar* data3 = new uchar[size];
+	////memcpy(data3, data2, data1->length());
+	////uchar* ptr = data3;
+	////size -= 17;
+	////memcpy(ptr, &size, sizeof(int32));
+	////size += 3;
+	////ptr += data1->length();
+	////ptr2 += 14;
+	////memcpy(ptr, ptr2, data1->length() - 14);
+
+	EQ2Packet* outapp = new EQ2Packet(OP_ClientCmdMsg, data2, size);
+	//DumpPacket(outapp);
+	//safe_delete_array(data3);
+	safe_delete(packet);
+	return outapp;
+	/*PacketStruct* packet = configReader.getStruct("WS_ExamineAASpellInfo", client->GetVersion());
 	packet->setSubstructDataByName("info_header", "show_name", 0);
 	packet->setSubstructDataByName("info_header", "show_popup", 0);
 	packet->setSubstructDataByName("info_header", "packettype", packet_type);
@@ -263,89 +730,121 @@ EQ2Packet* Spell::SerializeAASpell(Client* client, AltAdvanceData* data, bool di
 	packet->setSubstructDataByName("Spell_info", "current_rank", 0); // how to get this info to here?
 	packet->setSubstructDataByName("Spell_info", "max_rank", data->maxRank);
 	packet->setSubstructDataByName("Spell_info", "rank_cost", data->rankCost);
+	packet->setSubstructDataByName("spell_info", "unknown2", 20);
 	// Spell info
-	packet->setSubstructDataByName("Spell_info", "id", spell->id);
+	packet->setSubstructDataByName("spell_info", "id", spell->id);
 	packet->setSubstructDataByName("spell_info", "icon", spell->icon);
-	packet->setSubstructDataByName("spell_info", "icon2", spell->icon_heroic_op);
-	packet->setSubstructDataByName("spell_info", "icontype", spell->icon_backdrop);
-	packet->setSubstructDataByName("spell_info", "version",0x04);
-	packet->setSubstructDataByName("spell_info", "sub_version",0x03EA);
+	packet->setSubstructDataByName("spell_info", "icon2", spell->icon_heroic_op);	// fix struct element name eventually
+	packet->setSubstructDataByName("spell_info", "icontype", spell->icon_backdrop);	// fix struct element name eventually
+
+	if (packet->GetVersion() >= 63119) {
+		packet->setSubstructDataByName("spell_info", "version", 0x04);
+		packet->setSubstructDataByName("spell_info", "sub_version", 0x24);
+	}
+	else if (packet->GetVersion() >= 1193) {
+		packet->setSubstructDataByName("spell_info", "version", 0x00);
+		packet->setSubstructDataByName("spell_info", "sub_version", 0xD9);
+	}
+	else {
+		packet->setSubstructDataByName("spell_info", "version", 0x11);
+		packet->setSubstructDataByName("spell_info", "sub_version", 0x14);
+	}
+
 	packet->setSubstructDataByName("spell_info", "type", spell->type);
+	packet->setSubstructDataByName("spell_info", "unknown_MJ1d", 1); //63119 test
 	packet->setSubstructDataByName("spell_info", "class_skill", spell->class_skill);
 	packet->setSubstructDataByName("spell_info", "mastery_skill", spell->mastery_skill);
-	if(spell->type != 2){
+	packet->setSubstructDataByName("spell_info", "duration_flag", spell->duration_until_cancel);
+	if (client && spell->type != 2) {
 		sint8 spell_text_color = client->GetPlayer()->GetArrowColor(GetLevelRequired(client));
-		if(spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
+		if (spell_text_color != ARROW_COLOR_WHITE && spell_text_color != ARROW_COLOR_RED && spell_text_color != ARROW_COLOR_GRAY)
 			spell_text_color = ARROW_COLOR_WHITE;
 		spell_text_color -= 6;
-		if(spell_text_color < 0)
-			spell_text_color*=-1;
+		if (spell_text_color < 0)
+			spell_text_color *= -1;
 		packet->setSubstructDataByName("spell_info", "spell_text_color", spell_text_color);
 	}
 	else
 		packet->setSubstructDataByName("spell_info", "spell_text_color", 3);
-	if(spell->type != 2){
+	if (spell->type != 2) {
 		packet->setSubstructArrayLengthByName("spell_info", "num_levels", levels.size());
-		for(int32 i=0;i<levels.size();i++){
+		for (int32 i = 0; i < levels.size(); i++) {
 			packet->setArrayDataByName("adventure_class", levels[i]->adventure_class, i);
 			packet->setArrayDataByName("tradeskill_class", levels[i]->tradeskill_class, i);
 			packet->setArrayDataByName("spell_level", levels[i]->spell_level, i);
 		}
 	}
-	int16 hp_req = GetHPRequired(client->GetPlayer());
-	int16 power_req = GetPowerRequired(client->GetPlayer());
-	packet->setSubstructDataByName("spell_info", "tier",spell->tier);
-	packet->setSubstructDataByName("spell_info", "health_req",hp_req);
-	packet->setSubstructDataByName("spell_info", "health_upkeep",spell->hp_upkeep);
-	packet->setSubstructDataByName("spell_info", "power_req",power_req);
-	packet->setSubstructDataByName("spell_info", "power_upkeep",spell->power_upkeep);
-	// might need version checks around these?
-	if( client->GetVersion() >= 1193 )
-	{
-		int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
-		packet->setSubstructDataByName("spell_info", "savagery_req",savagery_req);
-		packet->setSubstructDataByName("spell_info", "savagery_upkeep",spell->savagery_upkeep);
+	//packet->setSubstructDataByName("spell_info", "unknown9", 20);
+	int16 hp_req = 0;
+	int16 power_req = 0;
+	if (client) {
+		hp_req = GetHPRequired(client->GetPlayer());
+		power_req = GetPowerRequired(client->GetPlayer());
+
+		// might need version checks around these?
+		if (client->GetVersion() >= 1193)
+		{
+			int16 savagery_req = GetSavageryRequired(client->GetPlayer()); // dunno why we need to do this
+			packet->setSubstructDataByName("spell_info", "savagery_req", savagery_req);
+			packet->setSubstructDataByName("spell_info", "savagery_upkeep", spell->savagery_upkeep);
+		}
+		if (client->GetVersion() >= 57048)
+		{
+			int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
+			packet->setSubstructDataByName("spell_info", "dissonance_req", dissonance_req);
+			packet->setSubstructDataByName("spell_info", "dissonance_upkeep", spell->dissonance_upkeep);
+		}
 	}
-	if( client->GetVersion() >= 57048 )
-	{
-		int16 dissonance_req = GetDissonanceRequired(client->GetPlayer()); // dunno why we need to do this
-		packet->setSubstructDataByName("spell_info", "dissonance_req",dissonance_req);
-		packet->setSubstructDataByName("spell_info", "dissonance_upkeep",spell->dissonance_upkeep);
-	}
-	packet->setSubstructDataByName("spell_info", "req_concentration",spell->req_concentration);
-	packet->setSubstructDataByName("spell_info", "cast_time",spell->cast_time);
-	packet->setSubstructDataByName("Spell_info", "recovery", spell->recovery);
-	packet->setSubstructDataByName("spell_info", "recast",spell->recast);
-	packet->setSubstructDataByName("spell_info", "radius",spell->radius);
-	packet->setSubstructDataByName("spell_info", "max_aoe_targets",spell->max_aoe_targets);
-	packet->setSubstructDataByName("spell_info", "friendly_spell",spell->friendly_spell);
+	packet->setSubstructDataByName("spell_info", "tier", spell->tier);
+	packet->setSubstructDataByName("spell_info", "health_req", hp_req);
+	packet->setSubstructDataByName("spell_info", "health_upkeep", spell->hp_upkeep);
+	packet->setSubstructDataByName("spell_info", "power_req", power_req);
+	packet->setSubstructDataByName("spell_info", "power_upkeep", spell->power_upkeep);
+	packet->setSubstructDataByName("spell_info", "req_concentration", spell->req_concentration);
+	//packet->setDataByName("req_concentration2", 2);
+	packet->setSubstructDataByName("spell_info", "cast_time", spell->cast_time);
+	packet->setSubstructDataByName("spell_info", "recovery", spell->recovery);
+	packet->setSubstructDataByName("spell_info", "recast", spell->recast);
+	packet->setSubstructDataByName("spell_info", "radius", spell->radius);
+	packet->setSubstructDataByName("spell_info", "max_aoe_targets", spell->max_aoe_targets);
+	packet->setSubstructDataByName("spell_info", "friendly_spell", spell->friendly_spell);
+	//reageants??
 	packet->setSubstructArrayLengthByName("spell_info", "num_effects", effects.size());
-	for(int32 i=0;i<effects.size();i++){
-		packet->setArrayDataByName("effect", effects[i]->description.c_str(), i);
-		packet->setArrayDataByName("percentage", effects[i]->percentage, i);
+	for (int32 i = 0; i < effects.size(); i++) {
 		packet->setArrayDataByName("subbulletflag", effects[i]->subbullet, i);
+		packet->setArrayDataByName("effect", effects[i]->description.c_str(), i);
+		packet->setArrayDataByName("percentage", effects[i]->percentage, i);		
 	}
+	//if (display_tier == true)
 	packet->setSubstructDataByName("spell_info", "display_spell_tier", spell->display_spell_tier);
-	packet->setSubstructDataByName("spell_info", "minimum_range", spell->min_range);
-	packet->setSubstructDataByName("spell_info", "range",spell->range);
-	packet->setSubstructDataByName("spell_info", "duration1",spell->duration1);
-	packet->setSubstructDataByName("spell_info", "duration2",spell->duration2);
-	packet->setSubstructDataByName("spell_info", "duration_flag", spell->duration_until_cancel);
+	//else
+	//	packet->setSubstructDataByName("spell_info", "display_spell_tier", 0);
+
+	// minimum range??
+	packet->setSubstructDataByName("spell_info", "range", spell->range);
+	packet->setSubstructDataByName("spell_info", "duration1", spell->duration1);
+	packet->setSubstructDataByName("spell_info", "duration2", spell->duration2);
+	//unknown9 ??
+	//duration flag??
 	packet->setSubstructDataByName("spell_info", "target", spell->target_type);
-	packet->setSubstructDataByName("spell_info", "can_effect_raid",spell->can_effect_raid);
-	packet->setSubstructDataByName("spell_info", "affect_only_group_members",spell->affect_only_group_members);
-	packet->setSubstructDataByName("spell_info", "group_spell",spell->group_spell);
-	packet->setSubstructDataByName("spell_info", "resistibility",spell->resistibility);
-	packet->setSubstructDataByName("spell_info", "hit_bonus", spell->hit_bonus);
+	packet->setSubstructDataByName("spell_info", "can_effect_raid", spell->can_effect_raid);
+	packet->setSubstructDataByName("spell_info", "affect_only_group_members", spell->affect_only_group_members);
+	packet->setSubstructDataByName("spell_info", "group_spell", spell->group_spell);
+	packet->setSubstructDataByName("spell_info", "resistibility", spell->resistibility);
+	//unknown11 ??
+	//hit_bonus ??
+	//unknown12 ??
 	packet->setSubstructDataByName("spell_info", "name", &(spell->name));
 	packet->setSubstructDataByName("spell_info", "description", &(spell->description));
-
 	EQ2Packet* packetdata = packet->serialize();
-	EQ2Packet* app = new EQ2Packet(OP_AdventureList, packetdata->pBuffer, packetdata->size);
+	//EQ2Packet* app = new EQ2Packet(OP_AdventureList, packetdata->pBuffer, packetdata->size);
+	EQ2Packet* app = new EQ2Packet(OP_ClientCmdMsg, packetdata->pBuffer, packetdata->size);
+	packet->PrintPacket();
 	//DumpPacket(app);
 	safe_delete(packet);
 	safe_delete(data);
 	return app;
+	*/
 }
 
 EQ2Packet* Spell::SerializeSpell(Client* client, bool display, bool trait_display, int8 packet_type, int8 sub_packet_type, const char* struct_name){
@@ -384,6 +883,13 @@ EQ2Packet* Spell::SerializeSpell(Client* client, bool display, bool trait_displa
 	packet->setSubstructDataByName("spell_info", "damage_remaining", 0xFFFF);
 	//packet->PrintPacket();
 	// This adds the second portion to the spell packet. Could be used for bonuses etc.?
+	int8 offset = 0;
+	if (packet->GetVersion() == 60114) {
+		offset = 28;
+	}
+	else {
+		offset = 14;
+	}
 	string* data1 = packet->serializeString();
 	uchar*  data2 = (uchar*)data1->c_str();
 	uchar*  ptr2 = data2;
@@ -391,12 +897,12 @@ EQ2Packet* Spell::SerializeSpell(Client* client, bool display, bool trait_displa
 	uchar* data3 = new uchar[size];
 	memcpy(data3, data2, data1->length());
 	uchar* ptr = data3;
-	size -=17;
+	size -=offset+3;
 	memcpy(ptr, &size, sizeof(int32)); 
 	size +=3;
 	ptr += data1->length();
-	ptr2 += 14;
-	memcpy(ptr, ptr2, data1->length() - 14);
+	ptr2 += offset;
+	memcpy(ptr, ptr2, data1->length() - offset);
 
 	EQ2Packet* outapp = new EQ2Packet(OP_ClientCmdMsg, data3, size);
 	//DumpPacket(outapp);
@@ -581,6 +1087,11 @@ bool Spell::ScribeAllowed(Player* player){
 	if(player){
 		MSpellInfo.lock();
 		for(int32 i=0;!ret && i<levels.size();i++){
+			int16 mylevel = player->GetLevel();
+			int16 spelllevels = levels[i]->spell_level;
+			bool advlev = player->GetAdventureClass() == levels[i]->adventure_class;
+			bool tslev = player->GetTradeskillClass() == levels[i]->tradeskill_class;
+			bool levelmatch = player->GetLevel() >= levels[i]->spell_level;
 			if((player->GetAdventureClass() == levels[i]->adventure_class || player->GetTradeskillClass() == levels[i]->tradeskill_class) && player->GetLevel() >= levels[i]->spell_level)
 				ret = true;
 		}
@@ -641,6 +1152,14 @@ EQ2Packet* MasterSpellList::GetSpellPacket(int32 id, int8 tier, Client* client, 
 	Spell* spell = GetSpell(id, tier);
 	if(spell)
 		return spell->SerializeSpell(client, display, packet_type);
+	return 0;
+}
+EQ2Packet* MasterSpellList::GetAASpellPacket(int32 id, int8 tier, Client* client, bool display, int8 packet_type) {
+	Spell* spell = GetSpell(id, (tier == 0 ? 1 : tier));
+	//Spell* spell2= GetSpell(id, (tier +1));
+	AltAdvanceData* data = master_aa_list.GetAltAdvancement(id);
+	if (spell)
+		return spell->SerializeAASpell(client,tier, data, display,false, packet_type);
 	return 0;
 }
 

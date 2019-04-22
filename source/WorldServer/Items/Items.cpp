@@ -733,6 +733,7 @@ Item::Item(){
 	itemset_info = 0;
 	armor_info = 0;
 	book_info = 0;
+	book_info_pages = 0;
 	houseitem_info = 0;
 	housecontainer_info = 0;
 	memset(&details, 0, sizeof(ItemCore));
@@ -762,6 +763,8 @@ Item::~Item(){
 		safe_delete(item_level_overrides[i]);
 	for(int32 i=0;i<item_effects.size();i++)
 		safe_delete(item_effects[i]);
+	for (int32 i = 0; i < book_pages.size(); i++)
+		safe_delete(book_pages[i]);
 	safe_delete(weapon_info);
 	safe_delete(ranged_info);
 	safe_delete(adornment_info);
@@ -799,6 +802,7 @@ void Item::SetItem(Item* old_item){
 	itemset_info = 0;
 	armor_info = 0;
 	book_info = 0;
+	book_info_pages = 0;
 	houseitem_info = 0;
 	housecontainer_info = 0;
 	stack_count = old_item->stack_count;
@@ -855,6 +859,7 @@ void Item::SetItem(Item* old_item){
 			book_info->author.size = old_item->book_info->author.size;
 			book_info->title.data = old_item->book_info->title.data;
 			book_info->title.size = old_item->book_info->title.size;
+			
 			break;
 		}
 		case ITEM_TYPE_HOUSE:{
@@ -946,6 +951,23 @@ void Item::SetItem(Item* old_item){
 			effect_2->percentage = effect->percentage;
 			effect_2->subbulletflag = effect->subbulletflag;
 			item_effects.push_back(effect_2);
+		}
+	}
+	book_pages.clear();
+	for (int32 i = 0; i < old_item->book_pages.size(); i++) {
+		BookPage* bookpage = old_item->book_pages[i];
+		if (bookpage) {
+			BookPage* bookpage_2 = new BookPage;
+			bookpage_2->page = bookpage->page;
+			bookpage_2->page_text.data = bookpage->page_text.data;
+			bookpage_2->page_text.size = bookpage->page_text.size;
+			bookpage_2->valign = bookpage->valign;
+			bookpage_2->halign = bookpage->halign;
+			
+
+
+
+			book_pages.push_back(bookpage_2);
 		}
 	}
 	slot_data.clear();
@@ -2020,8 +2042,11 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 	
 	if (IsHarvest()){
 		packet->setSubstructDataByName("footer", "crafting_flag", 1);
+
+
 		
 	}
+	
 	// Set these to 0 for now
 	if(packet->GetVersion() >= 1188){
 		packet->setSubstructDataByName("footer", "locked_flag", 0);
@@ -2036,6 +2061,10 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 3);
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 4);
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 5);
+		
+	}
+	if (packet->GetVersion() >= 1289) {// at some point after this there are 10 adornment slots all FF for now but will skip this if not needed for a version
+		
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 6);
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 7);
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 8);
@@ -2043,10 +2072,13 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 		packet->setSubstructDataByName("footer", "adorn_slots", 0xFF, 0, 10);
 	}
 
+
 	packet->setSubstructDataByName("footer", "name", name.c_str());
 	packet->setSubstructDataByName("footer", "description", description.c_str());
 
 	LogWrite(ITEM__PACKET, 0, "Items", "Dump/Print Packet in func: %s, line: %i", __FUNCTION__, __LINE__);
+	//packet->PrintPacket();
+
 #if EQDEBUG >= 9
 	packet->PrintPacket();
 #endif
@@ -2236,7 +2268,15 @@ void Item::AddEffect(string effect, int8 percentage, int8 subbulletflag){
 	item_effect->percentage = percentage;
 	item_effects.push_back(item_effect);
 }
-
+void Item::AddBookPage(int8 page, string page_text, int8 valign, int8 halign) {
+	 BookPage * bookpage = new BookPage;
+	 bookpage->page = page;
+	 bookpage->page_text.data = page_text;
+	 bookpage->page_text.size = page_text.length();
+	 bookpage->valign = valign;
+	 bookpage->halign = halign;
+	 book_pages.push_back(bookpage);
+}
 void Item::AddLevelOverride(ItemLevelOverride* level_override){
 	AddLevelOverride(level_override->adventure_class, level_override->tradeskill_class, level_override->level);
 }
@@ -2905,15 +2945,64 @@ EQ2Packet* PlayerItemList::serialize(Player* player, int16 version){
 }
 
 void PlayerItemList::AddItemToPacket(PacketStruct* packet, Player* player, Item* item, int16 i, bool overflow){
+	Client *client;
+	int8 tmp_subtype = 0;
+	if (!packet || !player)
+		return;
+	client = player->GetZone()->GetClientBySpawn(player);
+	
+	
+	
 	int32 menu_data = 3;
 
 	if(item->slot_data.size() > 0)
 		menu_data -= ITEM_MENU_TYPE_GENERIC;
 	if(item->details.num_slots > 0)
 		menu_data += ITEM_MENU_TYPE_BAG;
+	if (item->details.item_id == 21355) {
+		//menu_data += ITEM_MENU_TYPE_GENERIC;
+		//menu_data += ITEM_MENU_TYPE_EQUIP;
+		menu_data += ITEM_MENU_TYPE_BOOK;
+		//menu_data += ITEM_MENU_TYPE_BAG;
+		//menu_data += ITEM_MENU_TYPE_HOUSE;
+		//menu_data += ITEM_MENU_TYPE_TEST12;
+		//menu_data += ITEM_MENU_TYPE_SCRIBE;
+		//menu_data += ITEM_MENU_TYPE_TEST13;
+		//menu_data += ITEM_MENU_TYPE_INVALID;
+		//menu_data += ITEM_MENU_TYPE_TEST14;
+		//menu_data += ITEM_MENU_TYPE_BROKEN;
+	}
+	if (item->details.item_id == 21356) {
+		menu_data += ITEM_MENU_TYPE_TEST15;
+		menu_data += ITEM_MENU_TYPE_ATTUNED;
+		menu_data += ITEM_MENU_TYPE_ATTUNEABLE;
+		menu_data += ITEM_MENU_TYPE_BOOK;
+		menu_data += ITEM_MENU_TYPE_DISPLAY_CHARGES;
+		menu_data += ITEM_MENU_TYPE_TEST1;
+		menu_data += ITEM_MENU_TYPE_NAMEPET;
+		menu_data += ITEM_MENU_TYPE_TEST2;
+		menu_data += ITEM_MENU_TYPE_CONSUME;
+		menu_data += ITEM_MENU_TYPE_USE;
+	}
+	if (item->details.item_id == 21357) {
+		menu_data += ITEM_MENU_TYPE_CONSUME_OFF		;
+		menu_data += ITEM_MENU_TYPE_TEST3			;
+		menu_data += ITEM_MENU_TYPE_TEST4			;
+		menu_data += ITEM_MENU_TYPE_TEST5			;
+		menu_data += ITEM_MENU_TYPE_TEST6			;
+		menu_data += ITEM_MENU_TYPE_TEST7			;
+		menu_data += ITEM_MENU_TYPE_TEST8			;
+		menu_data += ITEM_MENU_TYPE_TEST9			;
+		menu_data += ITEM_MENU_TYPE_DAMAGED			;
+		menu_data += ITEM_MENU_TYPE_BROKEN2			;
+		menu_data += ITEM_MENU_TYPE_REDEEM	       ;
+		menu_data += ITEM_MENU_TYPE_TEST10			;
+		menu_data += ITEM_MENU_TYPE_UNPACK			;
+	}
 	if(item->IsSkill()){
 		Spell* spell = master_spell_list.GetSpell(item->skill_info->spell_id, item->skill_info->spell_tier);
-		if(spell && spell->ScribeAllowed(player))
+		if (spell && spell->ScribeAllowed(player))
+			
 			menu_data += ITEM_MENU_TYPE_SCRIBE;
 		else
 			menu_data += ITEM_MENU_TYPE_INVALID;
@@ -2927,9 +3016,10 @@ void PlayerItemList::AddItemToPacket(PacketStruct* packet, Player* player, Item*
 		menu_data += ITEM_MENU_TYPE_HOUSE;
 	}
 	if (item->generic_info.item_type == 18){
-	//	menu_data += ITEM_MENU_TYPE_UNPACK; 
+		menu_data += ITEM_MENU_TYPE_UNPACK; 
 		packet->setSubstructArrayDataByName("items", "unknown3", ITEM_MENU_TYPE2_UNPACK, 0, i);
 	}
+
 	if(item->generic_info.condition == 0)
 		menu_data += ITEM_MENU_TYPE_BROKEN;
 	if(item->CheckFlag(ATTUNED) || item->CheckFlag(NO_TRADE))
@@ -2955,7 +3045,11 @@ void PlayerItemList::AddItemToPacket(PacketStruct* packet, Player* player, Item*
 	item->details.index = i;
 	packet->setSubstructArrayDataByName("items", "icon", item->details.icon, 0, i);
 	packet->setSubstructArrayDataByName("items", "slot_id", item->details.slot_id, 0, i);
-	packet->setSubstructArrayDataByName("items", "count", item->details.count, 0, i);
+	if (client->GetVersion() <= 1208) {
+		packet->setSubstructArrayDataByName("items", "count", (std::min)(item->details.count, (int16)255), 0, i);
+	}
+	else
+		packet->setSubstructArrayDataByName("items", "count", item->details.count, 0, i);
 	//packet->setSubstructArrayDataByName("items", "unknown4", 5, 0, i);
 	// need item level
 	packet->setSubstructArrayDataByName("items", "item_level", item->details.recommended_level , 0, i);

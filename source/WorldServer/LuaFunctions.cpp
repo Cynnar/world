@@ -152,7 +152,30 @@ int EQ2Emu_lua_SpawnSetByDistance(lua_State* state){
 		spawn->GetZone()->SpawnSetByDistance(spawn, max_distance, variable, value); 
 	return 0;
 }
+int	EQ2Emu_lua_PerformCameraShake(lua_State* state) {
 
+	if (!lua_interface)
+		return 0;
+	Client* client = 0;
+	Spawn* player = lua_interface->GetSpawn(state);
+	if (player->GetZone())
+		client = player->GetZone()->GetClientBySpawn(player);
+
+	if (!client) {
+		lua_interface->LogError("LUA PerformCameraShake command error: could not find client");
+		return 0;
+	}
+	int16 value1 = lua_interface->GetInt16Value(state, 2);
+	int16 value2 = lua_interface->GetInt16Value(state, 3);
+	PacketStruct* packet = configReader.getStruct("WS_PerformCameraShakeMsg", client->GetVersion());
+	if (packet) {
+		packet->setDataByName("unknown1", value1);
+		packet->setDataByName("unknown2", value2);
+		client->QueuePacket(packet->serialize());
+		safe_delete(packet);
+	}
+	return 0;
+}
 int EQ2Emu_lua_KillSpawn(lua_State* state) {
 	if(!lua_interface)
 		return 0;
@@ -1251,7 +1274,7 @@ int EQ2Emu_lua_SetMaxHP(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	sint32 value = lua_interface->GetSInt32Value(state, 2);
+	float value = lua_interface->GetFloatValue(state, 2);
 	lua_interface->ResetFunctionStack(state);
 	if (spawn && spawn->IsEntity() && value > 0)
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_HEALTH, value - spawn->GetTotalHP());
@@ -1509,7 +1532,7 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
 	int16 type = lua_interface->GetInt16Value(state, 2);
-	sint32 value = lua_interface->GetSInt32Value(state, 3);
+	float value = lua_interface->GetFloatValue(state, 3);
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
 
 	int64 class_req = 0;
@@ -1634,7 +1657,7 @@ int EQ2Emu_lua_AddSkillBonus(lua_State* state) {
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
 	int32 skill_id = lua_interface->GetInt32Value(state, 2);
-	float value = lua_interface->GetSInt32Value(state, 3);
+	float value = lua_interface->GetFloatValue(state, 3);
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
 	if (value != 0) {
 		int32 spell_id = 0;
@@ -2064,7 +2087,7 @@ int EQ2Emu_lua_SetWis(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	sint32 value = lua_interface->GetSInt32Value(state, 2);
+	float value = lua_interface->GetFloatValue(state, 2);
 	if(spawn && spawn->IsEntity()){
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_WIS, value);
 		if(spawn->IsPlayer())
@@ -2076,7 +2099,7 @@ int EQ2Emu_lua_SetSta(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	sint32 value = lua_interface->GetSInt32Value(state, 2);
+	float value = lua_interface->GetFloatValue(state, 2);
 	if(spawn && spawn->IsEntity()){
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_STA, value);
 		if(spawn->IsPlayer())
@@ -2088,7 +2111,7 @@ int EQ2Emu_lua_SetStr(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	sint32 value = lua_interface->GetSInt32Value(state, 2);
+	float value = lua_interface->GetFloatValue(state, 2);
 	if(spawn && spawn->IsEntity()){
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_STR, value);
 		if(spawn->IsPlayer())
@@ -2100,7 +2123,7 @@ int EQ2Emu_lua_SetAgi(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	sint32 value = lua_interface->GetSInt32Value(state, 2);
+	float value = lua_interface->GetFloatValue(state, 2);
 	if(spawn && spawn->IsEntity()){
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_AGI, value);
 		if(spawn->IsPlayer())
@@ -2396,7 +2419,7 @@ int EQ2Emu_lua_SetStepComplete(lua_State* state){
 	Spawn* player = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
 	int32 step = lua_interface->GetInt32Value(state, 3);
-	if(player && player->IsPlayer() && quest_id > 0 && step > 0){
+	if(player && player->IsPlayer() && quest_id > 0 && step > 0 && (((Player*)player)->player_quests.count(quest_id) > 0)){
 		Client* client = player->GetZone()->GetClientBySpawn(player);
 		if(client)
 			client->AddPendingQuestUpdate(quest_id, step);
@@ -2409,7 +2432,7 @@ int EQ2Emu_lua_AddStepProgress(lua_State* state) {
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
 	int32 step = lua_interface->GetInt32Value(state, 3);
 	int32 progress = lua_interface->GetInt32Value(state, 4); 
-	if (player && player->IsPlayer() && quest_id > 0 && step > 0 && progress > 0) {
+	if (player && player->IsPlayer() && quest_id > 0 && step > 0 && progress > 0 && (((Player*)player)->player_quests.count(quest_id) > 0)) {
 		Client* client = player->GetZone()->GetClientBySpawn(player);
 		if (client)
 			client->AddPendingQuestUpdate(quest_id, step, progress);
@@ -2422,7 +2445,7 @@ int EQ2Emu_lua_GetTaskGroupStep(lua_State* state){
 		return 0;
 	Spawn* player = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
-	if(player && player->IsPlayer() && quest_id > 0){
+	if(player && player->IsPlayer() && quest_id > 0 ){
 		lua_interface->SetInt32Value(state, ((Player*)player)->GetTaskGroupStep(quest_id));
 		return 1;
 	}
@@ -2435,7 +2458,7 @@ int EQ2Emu_lua_QuestStepIsComplete(lua_State* state){
 	Spawn* player = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
 	int32 step_id = lua_interface->GetInt32Value(state, 3);
-	if(player && player->IsPlayer() && quest_id > 0){
+	if(player && player->IsPlayer() && quest_id > 0 ){
 		lua_interface->SetBooleanValue(state, ((Player*)player)->GetQuestStepComplete(quest_id, step_id));
 		return 1;
 	}
@@ -2447,7 +2470,7 @@ int EQ2Emu_lua_GetQuestStep(lua_State* state){
 		return 0;
 	Spawn* player = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
-	if(player && player->IsPlayer() && quest_id > 0){
+	if(player && player->IsPlayer() && quest_id > 0 ){
 		lua_interface->SetInt32Value(state, ((Player*)player)->GetQuestStep(quest_id));
 		return 1;
 	}
@@ -2611,7 +2634,7 @@ int EQ2Emu_lua_QuestIsComplete(lua_State* state){
 		return 0;
 	Spawn* player = lua_interface->GetSpawn(state);
 	int32 quest_id = lua_interface->GetInt32Value(state, 2);
-	if(player && player->IsPlayer() && quest_id > 0){
+	if(player && player->IsPlayer() && quest_id > 0 && (((Player*)player)->player_quests.count(quest_id) > 0)){
 		Quest* quest = ((Player*)player)->player_quests[quest_id];
 		if(quest)
 			lua_interface->SetBooleanValue(state, quest->GetCompleted());

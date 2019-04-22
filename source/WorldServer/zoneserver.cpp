@@ -4659,6 +4659,19 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 	PacketStruct* packet = configReader.getStruct("WS_ZoneInfo", client->GetVersion());
 	packet->setSmallStringByName("server1",net.GetWorldName());
 	packet->setSmallStringByName("server2",net.GetWorldName());
+	packet->setDataByName("unknown1", 1, 1);//1, 1
+	int32 expansions = EXPANSION_UNKNOWN + EXPANSION_DOF + EXPANSION_KOS + EXPANSION_EOF + EXPANSION_ROK + EXPANSION_TSO + EXPANSION_DOV;
+	//packet->setDataByName("expansions_enabled", 82313211);//expansions 63181
+	//packet->setDataByName("expansions_enabled", 552075103);//expansions 63182 
+	packet->setDataByName("expansions_enabled", 4294967295);//expansions 1096 //612499455 works
+	if (client->GetVersion() >= 1193) {
+		packet->setDataByName("unknown3", 4294967295, 0); // DOV and down
+		packet->setDataByName("unknown3", 4294967295, 1); //COE and up
+		packet->setDataByName("unknown3", 4294967295, 2);
+	}
+	else
+		packet->setDataByName("unknown3", 4294967295, 0); // DOV and down
+
 	packet->setSmallStringByName("auction_website", "eq2emulator.net");
 	packet->setDataByName("auction_port", 80);
 	packet->setSmallStringByName("upload_page", "test_upload.m");
@@ -4667,14 +4680,11 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 	packet->setSmallStringByName("zone2", GetZoneName());
 	packet->setSmallStringByName("zone_desc", GetZoneDescription());
 	packet->setSmallStringByName("char_name", client->GetPlayer()->GetName());
-	//packet->setDataByName("unknown1", 1, 1);
-	int32 expansions = EXPANSION_UNKNOWN + EXPANSION_DOF + EXPANSION_KOS + EXPANSION_EOF + EXPANSION_ROK + EXPANSION_TSO + EXPANSION_DOV;
-	//packet->setDataByName("expansions_enabled", 82313211);//expansions 63181 
-	packet->setDataByName("expansions_enabled", 552075103);//expansions 63182 
+		
 	packet->setDataByName("x", client->GetPlayer()->GetX());
 	packet->setDataByName("y", client->GetPlayer()->GetY());
 	packet->setDataByName("z", client->GetPlayer()->GetZ());
-	packet->setDataByName("unknown1", 1, 1);//1, 1
+	
 	// unknown3 can prevent screen shots from being taken if
 	//packet->setDataByName("unknown3", 2094661567, 1);			// Screenshots allowed with this value
 	//packet->setDataByName("unknown3", 3815767999, 1);			// Screenshots disabled with this value
@@ -4739,11 +4749,12 @@ EQ2Packet* ZoneServer::GetZoneInfoPacket(Client* client){
 		packet->setDataByName("unknown3c", 4278189967);// 63182 4278189967
 		packet->setDataByName("unknown2a", 8);// 63182
 		packet->setDataByName("unknown2b", 8);// 63182
+		
 	}
 	else{
-		packet->setDataByName("unknown3", 872447025,0);//63181 
-		packet->setDataByName("unknown3", 3085434875,1);// 63181 
-		packet->setDataByName("unknown3", 2147483633,2);// 63181 
+		//packet->setDataByName("unknown3", 872447025,0);//63181 
+		//packet->setDataByName("unknown3", 3085434875,1);// 63181 
+		//packet->setDataByName("unknown3", 2147483633,2);// 63181 
 	}
 	
 	packet->setDataByName("year", world.GetWorldTimeStruct()->year);

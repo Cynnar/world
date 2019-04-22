@@ -108,7 +108,7 @@ struct StartingItem{
 	string	creator;
 	int8	condition;
 	int8	attuned;
-	int8	count;
+	int16	count;
 };
 
 class Bot;
@@ -154,10 +154,10 @@ public:
 	void	Save(Client* client);
 	void	SaveItems(Client* client);
 	void	SaveItem(int32 account_id, int32 char_id, Item* item, const char* type);
-	void	DeleteBuyBack(int32 char_id, int32 item_id, int8 quantity, int32 price);
+	void	DeleteBuyBack(int32 char_id, int32 item_id, int16 quantity, int32 price);
 	void	LoadBuyBacks(Client* client);
 	void	SaveBuyBacks(Client* client);
-	void	SaveBuyBack(int32 char_id, int32 item_id, int8 quantity, int32 price);
+	void	SaveBuyBack(int32 char_id, int32 item_id, int16 quantity, int32 price);
 	void	DeleteItem(int32 char_id, Item* item, const char* type);
 	void	SaveCharacterColors(int32 char_id, const char* type, EQ2_Color color);
 	void	SaveCharacterFloats(int32 char_id, const char* type, float float1, float float2, float float3);
@@ -174,6 +174,7 @@ public:
 	void	SaveCharacterQuestProgress(Client* client, Quest* quest);
 	void	DeleteCharacterQuest(int32 quest_id, int32 char_id, bool repeated_quest = false);
 	void	LoadCharacterQuests(Client* client);
+	void	LoadPlayerAA(Player *player);
 	void	LoadCharacterQuestProgress(Client* client);
 	void	LoadCharacterFriendsIgnoreList(Player* player);
 	void	LoadZoneInfo(ZoneServer* zone);
@@ -246,6 +247,7 @@ public:
 	int32	LoadItemAppearances();
 	int32	LoadItemLevelOverride();
 	int32	LoadItemEffects();
+	int32	LoadBookPages();
 	int32	LoadNextUniqueItemID();
 	int32	LoadSkillItems();
 	int32	LoadRangeWeapons();
@@ -270,7 +272,7 @@ public:
 	void	LoadTransportMaps(ZoneServer* zone);
 	void	LoadDataFromRow(MYSQL_ROW row, Item* item); // JA - eventually get rid of this function when all DB calls are converted
 	void	LoadDataFromRow(DatabaseResult *result, Item* item);
-	void	LoadCharacterItemList(int32 account_id, int32 char_id, Player* player);
+	void	LoadCharacterItemList(int32 account_id, int32 char_id, Player* player, int16);
 	bool	loadCharacter(const char* name, int32 account_id, Client* client);
 	bool	LoadCharacterStats(int32 id, int32 account_id, Client* client);
 	bool	InsertCharacterStats(int32 character_id, int8 class_id, int8 race_id);

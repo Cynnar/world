@@ -282,18 +282,20 @@ void PlayerSkillList::SetSkillCap(int32 skill_id, int16 value){
 }
 
 int16 PlayerSkillList::CalculateSkillValue(int32 skill_id, int16 current_val){
-	int16 new_val = current_val;
-	MutexMap<int32, SkillBonus*>::iterator itr = skill_bonus_list.begin();
-	while (itr.Next()) {
-		SkillBonus* sb = itr.second;
-		map<int32, SkillBonusValue*>::iterator sbv_itr;
-		for (sbv_itr = sb->skills.begin(); sbv_itr != sb->skills.end(); sbv_itr++) {
-			SkillBonusValue* sbv = sbv_itr->second;
-			if (sbv->skill_id == skill_id)
-				new_val += (int16)sbv->value;
+	if (current_val > 5) {
+		int16 new_val = current_val;
+		MutexMap<int32, SkillBonus*>::iterator itr = skill_bonus_list.begin();
+		while (itr.Next()) {
+			SkillBonus* sb = itr.second;
+			map<int32, SkillBonusValue*>::iterator sbv_itr;
+			for (sbv_itr = sb->skills.begin(); sbv_itr != sb->skills.end(); sbv_itr++) {
+				SkillBonusValue* sbv = sbv_itr->second;
+				if (sbv->skill_id == skill_id)
+					new_val += (int16)sbv->value;
+			}
 		}
+		return new_val;
 	}
-	return new_val;
 }
 
 int16 PlayerSkillList::CalculateSkillMaxValue(int32 skill_id, int16 max_val) {
@@ -341,15 +343,23 @@ EQ2Packet* PlayerSkillList::GetSkillPacket(int16 version){
 		for(itr = skills.begin(); itr != skills.end(); itr++){
 			skill = itr->second;
 			if(skill){
+
 				sint16 skill_max_with_bonuses = CalculateSkillMaxValue(skill->skill_id, skill->max_val);
+				sint16 skill_with_bonuses = int(CalculateSkillValue(skill->skill_id, skill->current_val));
+				if (skill_with_bonuses > 10) {
+					int x_current = skill->current_val;
+					int x_previous = skill->previous_val;
+					int x_max = skill->max_val;
+					int x_delta2 = skill_max_with_bonuses - skill->max_val;
+					int xxx = 1;
+				}
+
 				packet->setArrayDataByName("skill_id", skill->skill_id, i);
 				packet->setArrayDataByName("type", skill->skill_type, i);
-				//packet->setArrayDataByName("current_val", CalculateSkillValue(skill->skill_id, skill->current_val), i);
-				//packet->setArrayDataByName("base_val", skill->max_val, i);
-				//packet->setArrayDataByName("max_val", skill->max_val, i);
-				packet->setArrayDataByName("current_val", CalculateSkillValue(skill->skill_id, skill->current_val), i);
-				packet->setArrayDataByName("base_val", skill_max_with_bonuses, i);
-				packet->setArrayDataByName("skill_delta2", skill_max_with_bonuses - skill->max_val, i);
+				packet->setArrayDataByName("current_val", skill->current_val, i);
+				packet->setArrayDataByName("base_val", skill->current_val, i);// skill->
+				packet->setArrayDataByName("skill_delta", 0, i);// skill_with_bonuses- skill->current_val
+				packet->setArrayDataByName("skill_delta2", skill_max_with_bonuses - skill->max_val, i);// skill_max_with_bonuses - skill->max_val, i);
 				packet->setArrayDataByName("max_val", skill->max_val, i);
 				packet->setArrayDataByName("display_minval", skill->display, i);
 				packet->setArrayDataByName("display_maxval", skill->display, i);

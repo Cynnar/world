@@ -191,8 +191,10 @@ struct LUAData{
 	bool	bool_value;
 	float	float_value;
 	string	string_value;
+	string	string_value2;
 	sint32	int_value2;
 	float	float_value2;
+	string	string_helper;
 };
 struct SpellScriptTimer {
 	LuaSpell*		spell;
@@ -221,6 +223,7 @@ struct SpellData{
 	int16	type;
 	int32	class_skill;
 	int32	mastery_skill;
+	int8    ts_loc_index;
 	int8	num_levels;
 	int8	tier;
 	int16	hp_req;
@@ -273,6 +276,7 @@ struct SpellData{
 	bool    cast_while_moving;
 	bool    persist_though_death;
 	bool    not_maintained;
+	bool    is_aa;
 	int8	savage_bar;
 	int8	savage_bar_slot;
 	int32	soe_spell_crc;
@@ -285,16 +289,17 @@ public:
 	Spell(SpellData* in_spell);
 	EQ2Packet* SerializeSpell(Client* client, bool display, bool trait_display = false, int8 packet_type = 0, int8 sub_packet_type = 0, const char* struct_name = 0);
 	EQ2Packet* SerializeSpecialSpell(Client* client, bool display, int8 packet_type = 0, int8 sub_packet_type = 0);
-	EQ2Packet* SerializeAASpell(Client* client, AltAdvanceData* data, bool display, int16 packet_type = 0, int8 sub_packet_type = 0);
+	EQ2Packet* SerializeAASpell(Client* client,int8 tier, AltAdvanceData* data, bool display, bool trait_display = false, int8 packet_type = 0, int8 sub_packet_type = 0, const char* struct_name = 0);
 	void AddSpellLevel(int8 adventure_class, int8 tradeskill_class, int16 level);
 	void AddSpellEffect(int8 percentage, int8 subbullet, string description);
-	void AddSpellLuaData(int8 type, int int_value, float float_value, bool bool_value, string string_value);
-	void AddSpellLuaDataInt(int value);
-	void AddSpellLuaDataFloat(float value);
-	void AddSpellLuaDataBool(bool value);
-	void AddSpellLuaDataString(string value);
+	void AddSpellLuaData(int8 type, int int_value, int int_value2, float float_value, float float_value2, bool bool_value, string string_value,string string_value2, string helper);
+	void AddSpellLuaDataInt(int value, int value2, string helper);
+	void AddSpellLuaDataFloat(float value, float value2, string helper);
+	void AddSpellLuaDataBool(bool value, string helper);
+	void AddSpellLuaDataString(string value, string value2, string helper);
 	int32 GetSpellID();
 	void SetPacketInformation(PacketStruct* packet, Client* client = 0, bool display_tier = false);
+	void SetAAPacketInformation(PacketStruct* packet, AltAdvanceData* data, Client* client = 0, bool display_tier = false);
 	int8 GetSpellTier();
 	int32 GetSpellDuration();
 	int16 GetSpellIcon();
@@ -324,6 +329,9 @@ public:
 	bool CastWhileFeared();
 
 
+
+	vector<SpellDisplayEffect*> effects;
+	vector<LUAData*> lua_data;
 private:
 	bool heal_spell;
 	bool buff_spell;
@@ -332,8 +340,8 @@ private:
 	bool offense_spell;
 
 	SpellData* spell;
-	vector<LUAData*> lua_data;
-	vector<SpellDisplayEffect*> effects;
+	
+	//vector<SpellDisplayEffect*> effects;
 	vector <LevelArray*> levels;
 	Mutex MSpellInfo;
 };
@@ -352,6 +360,7 @@ public:
 	Spell* GetSpellByCRC(int32 spell_crc);
 	void Reload();
 	EQ2Packet* GetSpellPacket(int32 id, int8 tier, Client* client = 0, bool display = false, int8 packet_type = 0);
+	EQ2Packet* GetAASpellPacket(int32 id, int8 group, Client* client, bool display, int8 packet_type);
 	EQ2Packet* GetSpecialSpellPacket(int32 id, int8 tier, Client* client = 0, bool display = false, int8 packet_type = 0);
 	void AddSpell(int32 id, int8 tier, Spell* spell);
 	Mutex MMasterSpellList;

@@ -290,19 +290,19 @@ void EQStream::ProcessPacket(EQProtocolPacket *p)
 #ifdef EQN_DEBUG
 					LogWrite(PACKET__DEBUG, 1, "Packet", "*** Future packet: Expecting Seq=%i, but got Seq=%i", NextInSeq, seq);
 					LogWrite(PACKET__DEBUG, 1, "Packet", "[Start]");
-					//p->DumpRawHeader(seq);
+					p->DumpRawHeader(seq);
 					LogWrite(PACKET__DEBUG, 1, "Packet", "[End]");
 #endif				
 					OutOfOrderpackets[seq] = p->Copy();
-					//SendOutOfOrderAck(seq);
+					SendOutOfOrderAck(seq);
 				} else if (check<0) {
 #ifdef EQN_DEBUG
 					LogWrite(PACKET__DEBUG, 1, "Packet", "*** Duplicate packet: Expecting Seq=%i, but got Seq=%i", NextInSeq, seq);
 					LogWrite(PACKET__DEBUG, 1, "Packet", "[Start]");
-					//p->DumpRawHeader(seq);
+					p->DumpRawHeader(seq);
 					LogWrite(PACKET__DEBUG, 1, "Packet", "[End]");
 #endif
-					//OutOfOrderpackets[seq] = p->Copy();
+					OutOfOrderpackets[seq] = p->Copy();
 					SendOutOfOrderAck(seq);
 				} else {
 					SetNextAckToSend(seq);
@@ -474,10 +474,10 @@ void EQStream::ProcessPacket(EQProtocolPacket *p)
 			}
 			break;
 			default:
-				//EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
-				//InboundQueuePush(ap);
+				EQApplicationPacket *ap = p->MakeApplicationPacket(app_opcode_size);
+				InboundQueuePush(ap);
 				LogWrite(PACKET__INFO, 0, "Packet", "Received unknown packet type, disconnecting client");
-				SendDisconnect();
+				//SendDisconnect();
 				break;
 		}
 		if (OutOfOrderpackets.find(NextInSeq) != OutOfOrderpackets.end()){

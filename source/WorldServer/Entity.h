@@ -205,6 +205,11 @@ struct InfoStruct{
 	float			ability_modifier;
 	float			critical_mitigation;
 	float			block_chance;
+	float			uncontested_parry;
+	float			uncontested_block;
+	float			uncontested_dodge;
+	float			uncontested_riposte;
+
 	float			crit_chance;
 	float			crit_bonus;
 	float			potency;
@@ -632,7 +637,7 @@ public:
 	EQ2_Equipment	equipment;
 	CharFeatures	features;	
 
-	void AddSpellBonus(LuaSpell* spell, int16 type, sint32 value, int64 class_req = 0);
+	void AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req = 0);
 	BonusValues* GetSpellBonus(int32 spell_id);
 	vector<BonusValues*>* GetAllSpellBonuses(LuaSpell* spell);
 	bool CheckSpellBonusRemoval(LuaSpell* spell, int16 type);

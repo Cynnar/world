@@ -635,7 +635,7 @@ void LuaInterface::RegisterFunctions(lua_State* state) {
 	lua_register(state, "GetItemByID", EQ2Emu_lua_GetItemByID);
 	lua_register(state, "GetItemType", EQ2Emu_lua_GetItemType);
 	lua_register(state, "GetSpellName", EQ2Emu_lua_GetSpellName);
-	
+	lua_register(state, "PerformCameraShake", EQ2Emu_lua_PerformCameraShake);
 	lua_register(state, "GetModelType", EQ2Emu_lua_GetModelType);
 	lua_register(state, "GetSpeed", EQ2Emu_lua_GetSpeed);
 	lua_register(state, "HasMoved", EQ2Emu_lua_HasMoved);

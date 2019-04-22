@@ -263,7 +263,7 @@ void ClientPacketFunctions::SendItemCreationUI(Client* client, Recipe* recipe) {
 	Item* item = 0;
 	RecipeProducts* rp = 0;
 
-	packet->setDataByName("unknown1", 1000);
+	packet->setDataByName("max_possible_durability", 1000);
 	packet->setDataByName("max_possible_progress", 1000);
 
 	// All the packets I have looked at these unknowns are always the same
@@ -357,7 +357,7 @@ void ClientPacketFunctions::SendItemCreationUI(Client* client, Recipe* recipe) {
 	else
 		packet->setItemByName("product_item", item, client->GetPlayer(), 0, 2);
 
-	packet->setItemByName("product_item", item, client->GetPlayer());
+	//packet->setItemByName("product_item", item, client->GetPlayer());
 
 	if (rp->byproduct_id > 0) {
 		item = 0;
@@ -373,24 +373,18 @@ void ClientPacketFunctions::SendItemCreationUI(Client* client, Recipe* recipe) {
 
 	// Start of basic work to get the skills to show on the tradeskill window
 	// not even close to accurate but skills do get put on the ui
-	
+	int8 index = 0;
 	int8 size = 0;
 	vector<int32>::iterator itr;
 	vector<int32> spells = client->GetPlayer()->GetSpellBookSpellIDBySkill(recipe->GetTechnique());
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 			size++;
-
+			Spell* spell = master_spell_list.GetSpell(*itr,1);
 			if (size > 6) {
 				// only 6 slots for skills on the ui
 				break;
 			}
-			char str[20];
-			char temp[20];
-			strcpy(str, "skill");
-			itoa(size, temp, 10);
-			strcat(str, temp);
-			strcat(str, "_id");
-			packet->setDataByName(str, *itr);
+			packet->setDataByName("skill_id", *itr   ,spell->GetSpellData()->ts_loc_index -1);
 	}
 
 

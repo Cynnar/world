@@ -72,7 +72,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 	for (int i=0; i < Size(); i++) {
 
 		// Sort Character Traits
-		if (TraitList[i]->classReq == 255 && TraitList[i]->raceReq == 255 && !TraitList[i]->isFocusEffect) {
+		if (TraitList[i]->classReq == 255 && TraitList[i]->raceReq == 255 && !TraitList[i]->isFocusEffect && TraitList[i]->isTrait) {
 
 			itr = SortedTraitList.lower_bound(TraitList[i]->group);
 			if (itr != SortedTraitList.end() && !(SortedTraitList.key_comp()(TraitList[i]->group, itr->first))) {
@@ -99,7 +99,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 			}
 		}
 		// Sort Class Training
-		if (TraitList[i]->classReq == client->GetPlayer()->GetAdventureClass() && !TraitList[i]->isFocusEffect) {
+		if (TraitList[i]->classReq == client->GetPlayer()->GetAdventureClass() && TraitList[i]->isTraining) {
 			itr2 = ClassTraining.lower_bound(TraitList[i]->level);
 			if (itr2 != ClassTraining.end() && !(ClassTraining.key_comp()(TraitList[i]->level, itr2->first))) {
 				(itr2->second).push_back(TraitList[i]);
@@ -111,7 +111,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 			}
 		}
 		// Sort Racial Abilities
-		if (TraitList[i]->raceReq == client->GetPlayer()->GetRace() && !TraitList[i]->isInate) {
+		if (TraitList[i]->raceReq == client->GetPlayer()->GetRace() && !TraitList[i]->isInate && !TraitList[i]->isTraining) {
 			itr2 = RaceTraits.lower_bound(TraitList[i]->group);
 			if (itr2 != RaceTraits.end() && !(RaceTraits.key_comp()(TraitList[i]->group, itr2->first))) {
 				(itr2->second).push_back(TraitList[i]);
@@ -215,7 +215,15 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 				else
 					LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
 
-				if (client->GetPlayer()->HasSpell((*itr3)->spellID, (*itr3)->tier))
+				strcpy(sTrait, temp);
+				strcat(sTrait, "_unknown2");
+				packet->setArrayDataByName(sTrait, 1, index);
+
+				strcpy(sTrait, temp);
+				strcat(sTrait, "_unknown");
+				packet->setArrayDataByName(sTrait, 1, index);
+
+				if (client->GetPlayer()->HasSpell((*itr3)->spellID, (*itr3)->tier)) 
 					packet->setArrayDataByName("trait_line", count, index);
 			}
 			// Jabantiz: If less then 5 fill the rest of the line with FF FF FF FF FF FF FF FF FF FF FF FF
@@ -242,6 +250,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 			}
 		}
 	}
+	
 	// Class Training portion of the packet
 	packet->setArrayLengthByName("num_trainings", ClassTraining.size());
 	index = 0;
@@ -255,7 +264,9 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 			// Jabantiz: cant have more then 5 traits per line
 			if (count > 4)
 				break;
-
+			if (client->GetPlayer()->HasSpell((*itr3)->spellID, (*itr3)->tier)) {
+				packet->setArrayDataByName("training_line", count, index);
+			}
 			strcpy(sTrait, "training");
 			itoa(count, temp, 10);
 			strcat(sTrait, temp);
@@ -263,28 +274,37 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 			strcpy(temp, sTrait);
 			strcat(sTrait, "_icon");
 			tmp_spell = master_spell_list.GetSpell((*itr3)->spellID, (*itr3)->tier);
+
 			if (tmp_spell)
 				packet->setArrayDataByName(sTrait, tmp_spell->GetSpellIcon(), index);
 			else
-				LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
+				LogWrite(SPELL__ERROR, 0, "Training", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
 
 			strcpy(sTrait, temp);
 			strcat(sTrait, "_icon2");
 			if (tmp_spell)
 				packet->setArrayDataByName(sTrait, tmp_spell->GetSpellIconBackdrop(), index);
 			else
-				LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
+				LogWrite(SPELL__ERROR, 0, "Training", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
 
 			strcpy(sTrait, temp);
 			strcat(sTrait, "_id");
 			packet->setArrayDataByName(sTrait, (*itr3)->spellID, index);
 
 			strcpy(sTrait, temp);
+			strcat(sTrait, "_unknown");
+			packet->setArrayDataByName(sTrait,0xFFFFFFFF , index);
+
+			strcpy(sTrait, temp);
+			strcat(sTrait, "_unknown2");
+			packet->setArrayDataByName(sTrait, 1, index);
+
+			strcpy(sTrait, temp);
 			strcat(sTrait, "_name");
 			if (tmp_spell)
 				packet->setArrayDataByName(sTrait, tmp_spell->GetName(), index);
 			else
-				LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
+				LogWrite(SPELL__ERROR, 0, "Training", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
 
 			if (client->GetPlayer()->HasSpell((*itr3)->spellID, (*itr3)->tier))
 				packet->setArrayDataByName("training_line", count, index);
@@ -361,6 +381,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 				packet->setSubArrayDataByName("tradition_icon2", tmp_spell->GetSpellIconBackdrop(), index, count);
 				packet->setSubArrayDataByName("tradition_id", (*itr3)->spellID, index, count);
 				packet->setSubArrayDataByName("tradition_name", tmp_spell->GetName(), index, count);
+				packet->setSubArrayDataByName("tradition_unknown_58617_MJ1", 1, index, count);
 			}
 			else
 				LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
@@ -397,6 +418,7 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 
 	if (client->GetVersion() >= 1188) {
 		// total number of Focus Effects
+		num_selections = 0;
 		num_focuseffects = 0;
 		index = 0;
 		for (itr2 = FocusEffects.begin(); itr2 != FocusEffects.end(); itr2++) {
@@ -406,23 +428,35 @@ EQ2Packet* MasterTraitList::GetTraitListPacket (Client* client)
 		for (itr2 = FocusEffects.begin(); itr2 != FocusEffects.end(); itr2++) {
 			for (itr3 = itr2->second.begin(); itr3 != itr2->second.end(); itr3++, index++) {
 				Spell* spell = master_spell_list.GetSpell((*itr3)->spellID, (*itr3)->tier);
+				if (client->GetPlayer()->HasSpell((*itr3)->spellID, (*itr3)->tier)) {
+					num_selections++;
+					packet->setArrayDataByName("focus_selected", 1, index);
+				}
+				else {
+					packet->setArrayDataByName("focus_selected", 0, index);
+				}
 				if (spell) {
+					packet->setArrayDataByName("focus_unknown2", 1, index);
 					packet->setArrayDataByName("focus_icon", spell->GetSpellIcon(), index);
 					packet->setArrayDataByName("focus_icon2", spell->GetSpellIconBackdrop(), index);
 					packet->setArrayDataByName("focus_spell_crc", (*itr3)->spellID, index);
 					packet->setArrayDataByName("focus_name", spell->GetName(), index);
+					packet->setArrayDataByName("focus_unknown_58617_MJ1", 1, index);
 				}
 				else
 					LogWrite(SPELL__ERROR, 0, "Traits", "Could not find SpellID %u and Tier %i in Master Spell List (line: %i)", (*itr3)->spellID, (*itr3)->tier, __LINE__);
 			}
 		}
-		packet->setDataByName("unknown",0);
+		num_available_selections = client->GetPlayer()->GetLevel() / 9;
+		if (num_selections < num_available_selections)
+			packet->setDataByName("focus_allow_select", num_available_selections - num_selections);
+		else
+			packet->setDataByName("focus_allow_select", 0);
 	}
 	LogWrite(SPELL__PACKET, 0, "Traits", "Dump/Print Packet in func: %s, line: %i", __FUNCTION__, __LINE__);
 #if EQDEBUG >= 9
 	packet->PrintPacket();
 #endif
-
 	EQ2Packet* data = packet->serialize();
 	EQ2Packet* outapp = new EQ2Packet(OP_ClientCmdMsg, data->pBuffer, data->size);
 	//DumpPacket(outapp);

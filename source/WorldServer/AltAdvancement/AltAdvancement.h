@@ -35,10 +35,12 @@ along with EQ2Emulator.  If not, see <http://www.gnu.org/licenses/>.
 #define AA_PRESTIGE				5
 #define AA_TRADESKILL_PRESTIGE	6
 #define AA_DRAGON				7
-
+#define AA_DRAGONCLASS			8
+#define AA_FARSEAS				9
 struct AltAdvanceData
 {
 	int32	spellID;
+	int8	min_level;
 	int32	spell_crc;
 	string	name;
 	string	description;
@@ -58,6 +60,7 @@ struct AltAdvanceData
 	string	class_name;
 	string	subclass_name;
 	string	line_title;
+	int8	title_level;
 	int32	node_id;
 };
 
@@ -85,7 +88,7 @@ public:
 
 	/// <summary>empties the master Alternate Advancement list</summary>
 	void DestroyAltAdvancements();
-	void DisplayAA(Client* client);
+	void DisplayAA(Client* client,int8 newtemplate,int8 changemode);
 private:
 	vector <AltAdvanceData*> AAList;
 	Mutex MMasterAAList;
@@ -95,6 +98,7 @@ struct TreeNodeData
 {
 	int32	classID;
 	int32	treeID;
+	int32	AAtreeID;
 };
 
 class MasterAANodeList

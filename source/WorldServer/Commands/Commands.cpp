@@ -969,21 +969,21 @@ bool Commands::SetZoneCommand(Client* client, int32 zone_id, ZoneServer* zone, i
 	return true;
 }
 
-void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* client){
-	if(index>=remote_commands->commands.size()){
+void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* client) {
+	if (index >= remote_commands->commands.size()) {
 		LogWrite(COMMAND__ERROR, 0, "Command", "Error, command handler of %u was requested, but max handler is %u", index, remote_commands->commands.size());
 		return;
 	}
 	EQ2_RemoteCommandString* parent_command = 0;
 	EQ2_RemoteCommandString* command = &remote_commands->commands[index];
 	Seperator* sep = 0;
-	if(command_parms->size > 0){
+	if (command_parms->size > 0) {
 		sep = new Seperator(command_parms->data.c_str(), ' ', 10, 500, true);
-		if(sep && sep->arg[0] && remote_commands->validSubCommand(command->command.data, string(sep->arg[0]))){
+		if (sep && sep->arg[0] && remote_commands->validSubCommand(command->command.data, string(sep->arg[0]))) {
 			parent_command = command;
 			command = &(remote_commands->subcommands[command->command.data][string(sep->arg[0])]);
 			safe_delete(sep);
-			if(command_parms->data.length() > (command->command.data.length() + 1))
+			if (command_parms->data.length() > (command->command.data.length() + 1))
 				sep = new Seperator(command_parms->data.c_str() + (command->command.data.length() + 1), ' ', 10, 500, true);
 			LogWrite(COMMAND__DEBUG, 1, "Command", "Handler: %u, COMMAND: '%s', SUBCOMMAND: '%s'", index, parent_command->command.data.c_str(), command->command.data.c_str());
 		}
@@ -992,114 +992,159 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 	}
 
 	int ndx = 0;
-	if(command->required_status > client->GetAdminStatus())
+	if (command->required_status > client->GetAdminStatus())
 	{
 		LogWrite(COMMAND__ERROR, 0, "Command", "Player '%s' (%u) needs status %i to use command: %s", client->GetPlayer()->GetName(), client->GetAccountID(), command->required_status, command->command.data.c_str());
 		safe_delete(sep);
-		client->SimpleMessage(3,"Error: Your status is insufficient for this command.");
+		client->SimpleMessage(3, "Error: Your status is insufficient for this command.");
 		return;
 	}
 
 	Player* player = client->GetPlayer();
 	LogWrite(COMMAND__DEBUG, 0, "Command", "Player '%s' (%u), Command: %s", player->GetName(), client->GetAccountID(), command->command.data.c_str());
-	
-	switch(command->handler){
-		case COMMAND_RELOAD:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reload commands:");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload structs");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload items");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload luasystem");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload spawnscripts");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload spells");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload quests");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload spawns");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload groundspawns");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload zonescripts");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload entity_commands");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload factions");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload mail");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload guilds");
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"/reload locations");
-			break;
-							}
-		case COMMAND_RELOADSTRUCTS:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reloading Structs...");
-			configReader.ReloadStructs();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Done!");
-			break;
-								   }
-		case COMMAND_RELOAD_QUESTS:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reloading Quests...");
-			master_quest_list.Reload();
-			client_list.ReloadQuests();
-			zone_list.ReloadClientQuests();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Done!");
-			break;
-		}
-		case COMMAND_RELOAD_SPAWNS:{
-			client->GetCurrentZone()->ReloadSpawns();
-			break;
-								   }
-		case COMMAND_RELOAD_SPELLS:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reloading Spells...");
-			zone_list.DeleteSpellProcess();
-			master_spell_list.Reload();
-			if(lua_interface)
-				lua_interface->ReloadSpells();
-			zone_list.LoadSpellProcess();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Done!");
-			break;
-								   }
-		case COMMAND_RELOAD_GROUNDSPAWNS:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reloading Groundspawn Entries...");
-			client->GetCurrentZone()->DeleteGroundSpawnItems();
-			client->GetCurrentZone()->LoadGroundSpawnEntries();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Done!");
-			break;
-											 }
 
-		case COMMAND_RELOAD_ZONESCRIPTS:{
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Reloading Zone Scripts...");
-			world.ResetZoneScripts();
-			database.LoadZoneScriptData();
-			if(lua_interface)
-				lua_interface->DestroyZoneScripts();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW,"Done!");
-			break;
-										}
-		case COMMAND_RELOAD_ENTITYCOMMANDS: {
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Entity Commands...");
-			client->GetCurrentZone()->ClearEntityCommands();
-			database.LoadEntityCommands(client->GetCurrentZone());
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
-			break;
-										   }
-		case COMMAND_RELOAD_FACTIONS: {
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Factions...");
-			master_faction_list.Clear();
-			database.LoadFactionList();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
-			break;
-									  }
-		case COMMAND_RELOAD_MAIL: {
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Mail...");
-			zone_list.ReloadMail();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
-			break;
-								  }
-		case COMMAND_RELOAD_GUILDS: {
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Guilds...");
-			world.ReloadGuilds();
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
-			break;
-					   }
-		case COMMAND_RELOAD_LOCATIONS: {
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Locations...");
-			client->GetPlayer()->GetZone()->RemoveLocationGrids();
-			database.LoadLocationGrids(client->GetPlayer()->GetZone());
-			client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
-			break;
-									   }
+	switch (command->handler) {
+	case COMMAND_RELOAD: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reload commands:");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload structs");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload items");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload luasystem");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload spawnscripts");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload spells");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload quests");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload spawns");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload groundspawns");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload zonescripts");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload entity_commands");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload factions");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload mail");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload guilds");
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "/reload locations");
+		break;
+	}
+	case COMMAND_RELOADSTRUCTS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Structs...");
+		configReader.ReloadStructs();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_QUESTS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Quests...");
+		master_quest_list.Reload();
+		client_list.ReloadQuests();
+		zone_list.ReloadClientQuests();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_SPAWNS: {
+		client->GetCurrentZone()->ReloadSpawns();
+		break;
+	}
+	case COMMAND_RELOAD_SPELLS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Spells...");
+		zone_list.DeleteSpellProcess();
+		master_spell_list.Reload();
+		if (lua_interface)
+			lua_interface->ReloadSpells();
+		zone_list.LoadSpellProcess();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_GROUNDSPAWNS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Groundspawn Entries...");
+		client->GetCurrentZone()->DeleteGroundSpawnItems();
+		client->GetCurrentZone()->LoadGroundSpawnEntries();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+
+	case COMMAND_RELOAD_ZONESCRIPTS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Zone Scripts...");
+		world.ResetZoneScripts();
+		database.LoadZoneScriptData();
+		if (lua_interface)
+			lua_interface->DestroyZoneScripts();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_ENTITYCOMMANDS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Entity Commands...");
+		client->GetCurrentZone()->ClearEntityCommands();
+		database.LoadEntityCommands(client->GetCurrentZone());
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_FACTIONS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Factions...");
+		master_faction_list.Clear();
+		database.LoadFactionList();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_MAIL: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Mail...");
+		zone_list.ReloadMail();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_GUILDS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Guilds...");
+		world.ReloadGuilds();
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_RELOAD_LOCATIONS: {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Reloading Locations...");
+		client->GetPlayer()->GetZone()->RemoveLocationGrids();
+		database.LoadLocationGrids(client->GetPlayer()->GetZone());
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Done!");
+		break;
+	}
+	case COMMAND_READ: {
+		if (sep && sep->arg[1][0] && sep->IsNumber(1)) {
+			if (strcmp(sep->arg[0], "read") == 0) {
+				int32 item_index = atol(sep->arg[1]);
+				Item* item = client->GetPlayer()->item_list.GetItemFromIndex(item_index);
+				if (item) {
+					Spawn* spawn = client->GetPlayer()->GetTarget();
+					int8 numpages = item->book_pages.size();
+					
+					string page1 = string(item->book_pages[0]->page_text.data);
+					PacketStruct* packet = configReader.getStruct("WS_EqShowBook", client->GetVersion());
+					string title = item->name;
+					
+					
+					
+					if (packet) {
+							packet->setDataByName("spawn_id", client->GetPlayer()->GetIDWithPlayerSpawn(client->GetPlayer()));
+							packet->setDataByName("book_title", title.c_str());
+							packet->setDataByName("book_type", "simple");
+							packet->setDataByName("unknown2", 1);
+							packet->setDataByName("unknown5", 1, 4);
+							packet->setArrayLengthByName("num_pages", numpages);
+							for (int8 pages = 1; pages <= numpages; pages++) {
+
+								int8 pagenum = int8(item->book_pages[pages - 1]->page);
+								string page = string(item->book_pages[pages-1]->page_text.data);
+								int8 valign = int8(item->book_pages[pages - 1]->valign);
+								int8 halign = int8(item->book_pages[pages - 1]->halign);
+								packet->setArrayDataByName("page_text", page.c_str(), pagenum -1);
+								packet->setArrayDataByName("page_text_valign", valign , pagenum - 1);
+								packet->setArrayDataByName("page_text_halign", halign, pagenum - 1);
+
+								// Need to add support for images
+							}
+							client->QueuePacket(packet->serialize());
+							safe_delete(packet);
+					}
+
+					
+					break;
+				}
+			}
+			}
+
+}
 		case COMMAND_USEABILITY:{
 			if(sep && sep->arg[0][0] && sep->IsNumber(0)){
 				if(client->GetPlayer()->GetHP() == 0){
@@ -1186,6 +1231,21 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 						client->QueuePacket(outapp);
 					else
 						LogWrite(COMMAND__ERROR, 0, "Command", "Unknown Spell ID and/or Tier, ID: %u, Tier: %i", spell_id, tier);
+				}
+				else if (strcmp(sep->arg[0], "achievement") == 0) {
+					sint32 spell_id = atol(sep->arg[2]);
+					
+					int8 group = atoi(sep->arg[1]);
+					AltAdvanceData* data = 0;
+					SpellBookEntry* spellentry = 0;
+					int8 tier = client->GetPlayer()->GetSpellTier(spell_id);
+				
+					LogWrite(COMMAND__ERROR, 0, "Command", "AA Spell ID and/or Tier, ID: %u, Group: %i", spell_id, group);
+					EQ2Packet* outapp = master_spell_list.GetAASpellPacket(spell_id, tier, client, true, 0x45);
+					if (outapp)
+						client->QueuePacket(outapp);
+					else
+						LogWrite(COMMAND__ERROR, 0, "Command", "Unknown Spell ID and/or Tier, ID: %u, Tier: %i", spell_id, group);
 				}
 				else if (strcmp(sep->arg[0], "spellbook") == 0) {
 					sint32 spell_id = atol(sep->arg[1]);
@@ -2665,7 +2725,7 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 		case COMMAND_BUY_FROM_BROKER:{
 			if(sep && sep->arg[1][0] && sep->IsNumber(0) && sep->IsNumber(1)){
 				int32 item_id = atoul(sep->arg[0]);
-				int8 quantity = atoul(sep->arg[1]);
+				int16 quantity = atoul(sep->arg[1]);
 				client->AddItem(item_id, quantity);
 			}
 			break;
@@ -3791,10 +3851,22 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 		case COMMAND_BOT_INV			: { Command_Bot_Inv(client, sep); break; }
 		case COMMAND_BOT_SETTINGS		: { Command_Bot_Settings(client, sep); break; }
 		case COMMAND_BOT_HELP			: { Command_Bot_Help(client, sep); break; }
+		case GET_AA_XML					: { Get_AA_Xml(client, sep); break; }
+		case ADD_AA						: { Add_AA(client, sep); break; }
+		case COMMIT_AA_PROFILE			: { Commit_AA_Profile(client, sep); break; }
+		case BEGIN_AA_PROFILE			: { Begin_AA_Profile(client, sep); break; }
+		case BACK_AA					: { Back_AA(client, sep); break; }
+		case REMOVE_AA					: { Remove_AA(client, sep); break; }
+		case SWITCH_AA_PROFILE			: { Switch_AA_Profile(client, sep); break; }
+		case CANCEL_AA_PROFILE			: { Cancel_AA_Profile(client, sep); break; }
+		case SAVE_AA_PROFILE			: { Save_AA_Profile(client, sep); break; }
+
+
+
 
 		default: 
 		{
-			LogWrite(COMMAND__WARNING, 1, "Command", "Unhandled command: %s", command->command.data.c_str());
+			LogWrite(COMMAND__WARNING, 0, "Command", "Unhandled command: %s", command->command.data.c_str());
 			break;
 		}
 
@@ -7705,6 +7777,22 @@ void Commands::Command_TellChannel(Client *client, Seperator *sep) {
 
 void Commands::Command_Test(Client* client, EQ2_16BitString* command_parms) {
 
+	//Seperator* sep2 = new Seperator(command_parms->data.c_str(), ' ', 50, 500, true);
+	//client->GetCurrentZone()->SendSpellFailedPacket(client, atoi(sep2->arg[0]));
+		//}
+
+
+
+
+
+
+
+
+
+
+
+
+
 	/*Seperator* sep2 = new Seperator(command_parms->data.c_str(), ' ', 50, 500, true);
 	if (sep2 && sep2->arg[0] && sep2->IsNumber(0)) {
 		client->SetPendingFlightPath(atoi(sep2->arg[0]));
@@ -8365,6 +8453,48 @@ void Commands::Command_Player_Coins(Client* client, Seperator* sep) {
 
 void Commands::Command_AchievementAdd(Client* client, Seperator* sep) {
 	PrintSep(sep, "ACHIEVEMENT_ADD");
+	if (sep && sep->IsSet(0)) {
+		int32 spell_id = atoul(sep->arg[1]);
+		int8 spell_tier = 0;
+		spell_tier = client->GetPlayer()->GetSpellTier(spell_id);
+		AltAdvanceData* data = master_aa_list.GetAltAdvancement(spell_id);
+		// addspellbookentry here
+		if (spell_tier >= data->maxRank) {
+			return;
+		}
+		if (!spell_tier) {
+			spell_tier = 1;
+		}
+		if (!client->GetPlayer()->HasSpell(spell_id, 0, true))
+		{
+			Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier);
+			client->GetPlayer()->AddSpellBookEntry(spell_id, 1, client->GetPlayer()->GetFreeSpellBookSlot(spell->GetSpellData()->spell_book_type), spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+		else
+		{
+			Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier + 1);
+			int8 old_slot = client->GetPlayer()->GetSpellSlot(spell->GetSpellID());
+			client->GetPlayer()->RemoveSpellBookEntry(spell->GetSpellID());
+			client->GetPlayer()->AddSpellBookEntry(spell->GetSpellID(), spell->GetSpellTier(), old_slot, spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+
+
+		// cast spell here
+		if (!spell_tier)
+			spell_tier = 1;
+		Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier);
+		if (spell) {
+			client->GetCurrentZone()->ProcessSpell(spell, client->GetPlayer(), client->GetPlayer());
+		}
+	}
+	else {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Usage:  /useability {spell_id} [spell_tier]");
+	}
+	master_aa_list.DisplayAA(client, 0, 0);
 }
 
 void Commands::Command_Editor(Client* client, Seperator* sep) {
@@ -8446,4 +8576,105 @@ void Commands::Command_DeclineResurrection(Client* client, Seperator* sep) {
 	if(client->GetCurrentRez()->active)
 		client->GetCurrentRez()->should_delete = true;
 	client->GetResurrectMutex()->releasewritelock(__FUNCTION__, __LINE__);
+}
+void Commands::Switch_AA_Profile(Client* client, Seperator* sep) {
+	PrintSep(sep, "Switch_AA_Profile");
+		if (sep && sep->IsSet(0)) {
+		string type = sep->arg[0];
+		int8 newtemplate = atoul(sep->arg[1]);
+		master_aa_list.DisplayAA(client, newtemplate, 1);
+	}
+}
+void Commands::Get_AA_Xml(Client* client, Seperator* sep) {
+	PrintSep(sep, "Get_AA_Xml");
+	if (sep && sep->IsSet(0)) {
+		string tabnum = sep->arg[0];
+		string spellid = sep->arg[1];
+
+
+
+	}
+}
+void Commands::Add_AA(Client* client, Seperator* sep) {
+	PrintSep(sep, "Add_AA");
+	if (sep && sep->IsSet(0)) {
+		int32 spell_id = atoul(sep->arg[1]);
+		int8 spell_tier = 0;
+		spell_tier = client->GetPlayer()->GetSpellTier(spell_id);
+		AltAdvanceData* data = master_aa_list.GetAltAdvancement(spell_id);
+		// addspellbookentry here
+		if (spell_tier >= data->maxRank) {
+			return;
+		}
+		if (!spell_tier) {
+			spell_tier = 1;
+		}
+		if (!client->GetPlayer()->HasSpell(spell_id, 0, true))
+		{
+			Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier);
+			client->GetPlayer()->AddSpellBookEntry(spell_id, 1, client->GetPlayer()->GetFreeSpellBookSlot(spell->GetSpellData()->spell_book_type), spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+		else
+		{
+			Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier + 1 );
+			int8 old_slot = client->GetPlayer()->GetSpellSlot(spell->GetSpellID());
+			client->GetPlayer()->RemoveSpellBookEntry(spell->GetSpellID());
+			client->GetPlayer()->AddSpellBookEntry(spell->GetSpellID(), spell->GetSpellTier(), old_slot, spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+		
+		
+		// cast spell here
+		if (!spell_tier)
+			spell_tier = 1;
+		Spell* spell = master_spell_list.GetSpell(spell_id, spell_tier);
+		if (spell) {
+			client->GetCurrentZone()->ProcessSpell(spell, client->GetPlayer(), client->GetPlayer());
+		}
+	}
+	else {
+		client->SimpleMessage(CHANNEL_COLOR_YELLOW, "Usage:  /useability {spell_id} [spell_tier]");
+	}
+	master_aa_list.DisplayAA(client, 0, 0);
+}
+void Commands::Commit_AA_Profile(Client* client, Seperator* sep) {
+	PrintSep(sep, "Commit_AA_Profile");
+	if (sep && sep->IsSet(0)) {
+
+
+	}
+}
+void Commands::Begin_AA_Profile(Client* client, Seperator* sep) {
+	PrintSep(sep, "Begin_AA_Profile");
+	if (sep && sep->IsSet(0)) {
+		master_aa_list.DisplayAA(client, 100, 2);
+	}
+}
+void Commands::Back_AA(Client* client, Seperator* sep) {
+	if (sep && sep->IsSet(0)) {
+		PrintSep(sep, "Back_AA");
+
+	}
+}
+void Commands::Remove_AA(Client* client, Seperator* sep) {
+	if (sep && sep->IsSet(0)) {
+		PrintSep(sep, "Remove_AA");
+
+	}
+}
+
+void Commands::Cancel_AA_Profile(Client* client, Seperator* sep) {
+	MasterAAList master_aa_list;
+	PrintSep(sep, "Cancel_AA_Profile");
+	master_aa_list.DisplayAA(client, 0, 0);
+
+}
+void Commands::Save_AA_Profile(Client* client, Seperator* sep) {
+	if (sep && sep->IsSet(0)) {
+		PrintSep(sep, "Save_AA_Profile");
+
+	}
 }

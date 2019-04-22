@@ -90,7 +90,7 @@ bool WorldDatabase::ConnectNewDatabase() {
 
 
 
-void WorldDatabase::DeleteBuyBack(int32 char_id, int32 item_id, int8 quantity, int32 price) {
+void WorldDatabase::DeleteBuyBack(int32 char_id, int32 item_id, int16 quantity, int32 price) {
 	LogWrite(MERCHANT__DEBUG, 0, "Merchant", "Deleting Buyback - Player: %u, Item ID: %u, Qty: %i, Price: %u", char_id, item_id, quantity, price);
 
 	Query query;
@@ -148,7 +148,7 @@ void WorldDatabase::SaveBuyBacks(Client* client)
 	}
 }
 
-void WorldDatabase::SaveBuyBack(int32 char_id, int32 item_id, int8 quantity, int32 price) 
+void WorldDatabase::SaveBuyBack(int32 char_id, int32 item_id, int16 quantity, int32 price) 
 {
 	LogWrite(MERCHANT__DEBUG, 3, "Merchant", "Saving Buyback - Player: %u, Item ID: %u, Qty: %i, Price: %u", char_id, item_id, quantity, price);
 
@@ -1843,7 +1843,8 @@ void WorldDatabase::UpdateRandomize(int32 spawn_id, sint32 value) {
 int32 WorldDatabase::SaveCharacter(PacketStruct* create, int32 loginID){
 	Query query;
 	int8 race_id = create->getType_int8_ByName("race");
-	int8 class_id = create->getType_int8_ByName("class");
+	int8 class_id = create->getType_int8_ByName("class");//Normal server
+	//int8 class_id = 0; //CLassic Server Only
 	int8 gender_id = create->getType_int8_ByName("gender");
 	sint16 auto_admin_status = 0;
 
@@ -4020,7 +4021,7 @@ void WorldDatabase::LoadTraits(){
 	MYSQL_ROW row;
 	TraitData* trait;
 
-	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `spell_id`, `level`, `class_req`, `race_req`, `isInate`, `isFocusEffect`, `tier`, `group` FROM spell_traits");
+	MYSQL_RES* result = query.RunQuery2(Q_SELECT, "SELECT `spell_id`, `level`, `class_req`, `race_req`, `isTrait`,`isInate`, `isFocusEffect`, `isTraining`,`tier`, `group` FROM spell_traits");
 	while (result && (row = mysql_fetch_row(result))){
 		trait = new TraitData;
 		int8 i = 0;
@@ -4028,8 +4029,10 @@ void WorldDatabase::LoadTraits(){
 		trait->level = atoi(row[(++i)]);
 		trait->classReq = atoi(row[(++i)]);
 		trait->raceReq = atoi(row[(++i)]);
+		trait->isTrait = (atoi(row[(++i)]) == 0) ? false : true;
 		trait->isInate = (atoi(row[(++i)]) == 0) ? false : true;
 		trait->isFocusEffect = (atoi(row[(++i)]) == 0) ? false : true;
+		trait->isTraining = (atoi(row[(++i)]) == 0) ? false : true;
 		trait->tier = atoi(row[(++i)]);
 		trait->group = atoi(row[(++i)]);
 
@@ -4048,8 +4051,10 @@ void WorldDatabase::LoadSpells()
 	int32 total = 0;
 	map<int32, vector<LevelArray*> >* level_data = LoadSpellClasses();
 
-	if( !database_new.Select(&result, "SELECT s.`id`, `name`, `description`, `type`, `class_skill`, `mastery_skill`, `tier`, `hp_req`, `power_req`, `cast_time`, `recast`, `radius`, `max_aoe_targets`, `req_concentration`, `range`, `duration1`, `duration2`, `resistibility`, `hp_upkeep`, `power_upkeep`, `duration_until_cancel`, `target_type`, `recovery`, `power_req_percent`, `hp_req_percent`, `icon`, `icon_heroic_op`, `icon_backdrop`, `success_message`, `fade_message`, `cast_type`, `lua_script`, `call_frequency`, `interruptable`, `spell_visual`, `effect_message`, `min_range`, `can_effect_raid`, `affect_only_group_members`, `hit_bonus`, `display_spell_tier`, `friendly_spell`, `group_spell`, `spell_book_type`, spell_type+0, s.is_active, savagery_req, savagery_req_percent, savagery_upkeep, dissonance_req, dissonance_req_percent, dissonance_upkeep, linked_timer_id, det_type, incurable, control_effect_type, cast_while_moving, casting_flags, persist_through_death, not_maintained, savage_bar, savage_bar_slot, soe_spell_crc "
-									"FROM spells s, spell_tiers st "
+	if( !database_new.Select(&result, "SELECT s.`id`, ts.spell_id, ts.index, `name`, `description`, `type`, `class_skill`, `mastery_skill`, `tier`, `is_aa`,`hp_req`, `power_req`, `cast_time`, `recast`, `radius`, `max_aoe_targets`, `req_concentration`, `range`, `duration1`, `duration2`, `resistibility`, `hp_upkeep`, `power_upkeep`, `duration_until_cancel`, `target_type`, `recovery`, `power_req_percent`, `hp_req_percent`, `icon`, `icon_heroic_op`, `icon_backdrop`, `success_message`, `fade_message`, `cast_type`, `lua_script`, `call_frequency`, `interruptable`, `spell_visual`, `effect_message`, `min_range`, `can_effect_raid`, `affect_only_group_members`, `hit_bonus`, `display_spell_tier`, `friendly_spell`, `group_spell`, `spell_book_type`, spell_type+0, s.is_active, savagery_req, savagery_req_percent, savagery_upkeep, dissonance_req, dissonance_req_percent, dissonance_upkeep, linked_timer_id, det_type, incurable, control_effect_type, cast_while_moving, casting_flags, persist_through_death, not_maintained, savage_bar, savage_bar_slot, soe_spell_crc "
+									"FROM (spells s, spell_tiers st) "
+									"LEFT JOIN spell_ts_ability_index ts "
+									"ON s.`id` = ts.spell_id "
 									"WHERE s.id = st.spell_id AND s.is_active = 1 "
 									"ORDER BY s.`id`, `tier`") )
 	{
@@ -4067,6 +4072,7 @@ void WorldDatabase::LoadSpells()
 			data->id						= spell_id;
 			data->soe_spell_crc				= result.GetInt32Str("soe_spell_crc");
 			data->tier						= result.GetInt8Str("tier");
+			data->ts_loc_index				= result.GetInt8Str("index");
 			data->name.data					= spell_name.c_str();
 			data->name.size					= data->name.data.length();
 			data->description.data			= result.GetStringStr("description");
@@ -4100,6 +4106,7 @@ void WorldDatabase::LoadSpells()
 			data->persist_though_death      = ( result.GetInt8Str("persist_through_death") == 1);
 			data->cast_while_moving         = ( result.GetInt8Str("cast_while_moving") == 1);
 			data->not_maintained            = ( result.GetInt8Str("not_maintained") == 1);
+			data->is_aa						= (result.GetInt8Str("is_aa") == 1);
 
 			/* Skill Requirements */
 			data->class_skill				= result.GetInt32Str("class_skill");
@@ -4215,23 +4222,23 @@ void WorldDatabase::LoadSpellLuaData(){
 	Query query;
 	MYSQL_ROW row;
 	int32 total = 0;
-	MYSQL_RES *result = query.RunQuery2(Q_SELECT, "SELECT `spell_id`,`tier`,`value_type`,`value` "
+	MYSQL_RES *result = query.RunQuery2(Q_SELECT, "SELECT `spell_id`,`tier`,`value_type`,`value`,`value2`,`dynamic_helper` "
 												  "FROM `spell_data` "
 												  "ORDER BY `index_field`");
 
 	while (result && (row = mysql_fetch_row(result))) {
-		if ((spell = master_spell_list.GetSpell(atoul(row[0]), atoi(row[1]))) && row[2] && row[3]) {
+		if ((spell = master_spell_list.GetSpell(atoul(row[0]), atoi(row[1]))) && row[2] && row[3] && row[4] && row[4]) {
 
 			LogWrite(SPELL__DEBUG, 5, "Spells", "\tLoading Spell LUA Data for spell_id: %u", atoul(row[0]));
 
 			if (!strcmp(row[2], "INT"))
-				spell->AddSpellLuaDataInt(atoi(row[3]));
+				spell->AddSpellLuaDataInt(atoi(row[3]), atoi(row[4]), string(row[5]));
 			else if (!strcmp(row[2], "FLOAT"))
-				spell->AddSpellLuaDataFloat(atof(row[3]));
+				spell->AddSpellLuaDataFloat(atof(row[3]), atof(row[4]),string(row[5]));
 			else if (!strcmp(row[2], "BOOL"))
-				spell->AddSpellLuaDataBool(!(strncasecmp(row[3], "true", 4)));
+				spell->AddSpellLuaDataBool(!(strncasecmp(row[3], "true", 4)), string(row[5]));
 			else if (!strcmp(row[2], "STRING"))
-				spell->AddSpellLuaDataString(string(row[3]));
+				spell->AddSpellLuaDataString(string(row[3]), string(row[4]), string(row[5]));
 			else
 				LogWrite(SPELL__ERROR, 0, "Spells", "Invalid Lua Spell data '%s' for Spell ID: %u", row[2], spell->GetSpellID());
 			total++;

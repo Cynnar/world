@@ -32,8 +32,10 @@ struct TraitData
 	int8 level;
 	int8 classReq;
 	int8 raceReq;
+	bool isTrait;
 	bool isInate;
 	bool isFocusEffect;
+	bool isTraining;
 	int8 tier;
 	int8 group;
 };

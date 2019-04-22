@@ -135,11 +135,11 @@ public:
 	int32 Size();
 	void CreateMasterAchievementListPacket();
 	EQ2Packet * GetAchievementPacket() { return m_packetsCreated ? masterPacket : 0;}
-
+	EQ2Packet *masterPacket;
 private:
 	Mutex mutex_achievements;
 	map<int32, Achievement *> achievements;
-	EQ2Packet *masterPacket;
+	
 	bool m_packetsCreated;
 };
 
