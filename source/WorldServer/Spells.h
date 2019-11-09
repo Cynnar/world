@@ -228,7 +228,8 @@ struct SpellData{
 	int8	tier;
 	int16	hp_req;
 	int16	hp_upkeep;
-	int16	power_req;
+	float	power_req;
+	bool	power_by_level;
 	int16	power_upkeep;
 	int16	savagery_req;
 	int16	savagery_upkeep;

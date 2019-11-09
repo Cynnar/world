@@ -950,6 +950,15 @@ void LuaInterface::RegisterFunctions(lua_State* state) {
 	lua_register(state, "SpawnGroupByID", EQ2Emu_lua_SpawnGroupByID);
 	lua_register(state, "SetSpawnAnimation", EQ2Emu_lua_SetSpawnAnimation);
 	lua_register(state, "GetClientVersion", EQ2Emu_lua_GetClientVersion);
+	lua_register(state, "GetItemID", EQ2Emu_lua_GetItemID);
+	lua_register(state, "IsEntity", EQ2Emu_lua_IsEntity);
+	lua_register(state, "GetOrigX", EQ2Emu_lua_GetOrigX);
+	lua_register(state, "GetOrigY", EQ2Emu_lua_GetOrigY);
+	lua_register(state, "GetOrigZ", EQ2Emu_lua_GetOrigZ);
+	lua_register(state, "GetPCTOfHP", EQ2Emu_lua_GetPCTOfHP);
+	lua_register(state, "GetPCTOfPower", EQ2Emu_lua_GetPCTOfPower);
+	lua_register(state, "GetBoundZoneID", EQ2Emu_lua_GetBoundZoneID);
+	lua_register(state, "Evac", EQ2Emu_lua_Evac);
 }
 
 void LuaInterface::LogError(const char* error, ...)  {

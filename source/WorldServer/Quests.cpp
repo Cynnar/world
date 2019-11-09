@@ -34,7 +34,7 @@ extern LuaInterface* lua_interface;
 extern ConfigReader configReader;
 extern MasterFactionList master_faction_list;
 
-QuestStep::QuestStep(int32 in_id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage){
+QuestStep::QuestStep(int32 in_id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage, int32 in_usableitemid){
 	type = in_type;
 	description = in_description;
 	ids = in_ids;
@@ -48,6 +48,7 @@ QuestStep::QuestStep(int32 in_id, int8 in_type, string in_description, vector<in
 	id = in_id;
 	updated = false;
 	percentage = in_percentage;
+	usableitemid = in_usableitemid;
 }
 
 QuestStep::QuestStep(QuestStep* old_step){
@@ -81,6 +82,7 @@ QuestStep::QuestStep(QuestStep* old_step){
 	id = old_step->id;
 	updated = false;
 	percentage = old_step->percentage;
+	usableitemid = old_step->usableitemid;
 }
 
 QuestStep::~QuestStep(){
@@ -103,7 +105,9 @@ float QuestStep::GetPercentage(){
 int32 QuestStep::GetStepID(){
 	return id;
 }
-
+int32 QuestStep::GetItemID() {
+	return usableitemid;
+}
 void QuestStep::SetComplete(){
 	step_progress = quantity;
 	updated = true;
@@ -487,7 +491,7 @@ vector<QuestStep*>* Quest::GetQuestFailures(){
 }
 
 
-bool Quest::CheckQuestKillUpdate(Spawn* spawn){
+bool Quest::CheckQuestKillUpdate(Spawn* spawn, bool update){
 	QuestStep* step = 0;
 	bool ret = false;
 	int32 id = spawn->GetDatabaseID();
@@ -496,24 +500,29 @@ bool Quest::CheckQuestKillUpdate(Spawn* spawn){
 	for(int32 i=0;i<quest_steps.size(); i++){
 		step = quest_steps[i];
 		if(step && step->GetStepType() == QUEST_STEP_TYPE_KILL && !step->Complete() && step->CheckStepKillUpdate(id)){
-			bool passed = true;
-			if(step->GetPercentage() < 100)
-				passed = (step->GetPercentage() > MakeRandomFloat(0, 100));
-			if(passed){
-				//Call the progress action function with the total amount of progress actually granted
-				prog_added = step->AddStepProgress(1);
-				if(lua_interface && progress_actions[step->GetStepID()].length() > 0 && prog_added > 0)
-					lua_interface->CallQuestFunction(this, progress_actions[step->GetStepID()].c_str(), player, prog_added);
-				step_updates.push_back(step);
-				step->SetUpdateName(spawn->GetName());
+			if (update == true) {
+				bool passed = true;
+				if (step->GetPercentage() < 100)
+					passed = (step->GetPercentage() > MakeRandomFloat(0, 100));
+				if (passed) {
+					//Call the progress action function with the total amount of progress actually granted
+					prog_added = step->AddStepProgress(1);
+					if (lua_interface && progress_actions[step->GetStepID()].length() > 0 && prog_added > 0)
+						lua_interface->CallQuestFunction(this, progress_actions[step->GetStepID()].c_str(), player, prog_added);
+					step_updates.push_back(step);
+					step->SetUpdateName(spawn->GetName());
+					ret = true;
+				}
+				else
+					step_failures.push_back(step);
+			}
+			else {
 				ret = true;
 			}
-			else
-				step_failures.push_back(step);
 		}
 	}
 	MQuestSteps.unlock();
-	if(ret)
+	if(ret && update)
 		SetSaveNeeded(true);
 	return ret;
 }
@@ -554,8 +563,10 @@ bool Quest::SetStepComplete(int32 step){
 		}
 	}
 	MQuestSteps.unlock();
-	if(ret)
+	if (ret) {
 		SetSaveNeeded(true);
+	}
+
 	return ret;
 }
 
@@ -930,9 +941,9 @@ int8 Quest::GetVisible(){
 	return visible;
 }
 
-EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* player, QuestStep* updateStep, int8 update_count, bool old_completed_quest, bool quest_failure, bool display_quest_helper){
+EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* player, QuestStep* updateStep, int8 update_count, bool old_completed_quest, bool quest_failure, bool display_quest_helper) {
 	PacketStruct* packet = configReader.getStruct("WS_QuestJournalReply", version);
-	if(packet){	
+	if (packet) {
 		packet->setDataByName("quest_id", id);
 		packet->setDataByName("player_crc", player_crc);
 		packet->setDataByName("name", name.c_str());
@@ -950,9 +961,9 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			packet->setDataByName("unknown", 1, 4);
 			packet->setDataByName("time_stamp", m_timestamp);
 		}
-		
+
 		int8 difficulty = 0;
-		if(type == "Tradeskill")
+		if (type == "Tradeskill")
 			difficulty = player->GetTSArrowColor(level);
 		else
 			difficulty = player->GetArrowColor(level);
@@ -961,7 +972,7 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			packet->setDataByName("encounter_level", enc_level);
 		else
 			packet->setDataByName("encounter_level", 4);
-		packet->setDataByName("unknown2b", 4);		
+		packet->setDataByName("unknown2b", 4);
 		int16 task_groups_completed = 0;
 		int16 total_task_groups = 0;
 		vector<QuestStep*> primary_order;
@@ -982,7 +993,7 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 		int8 map_data_count = 0;
 
 		packet->setDataByName("bullets", 1);
-		if(old_completed_quest) {
+		if (old_completed_quest) {
 			if (version >= 1096) {
 				packet->setDataByName("complete", 1);
 				packet->setDataByName("complete2", 1);
@@ -1007,7 +1018,7 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			packet->setDataByName("update_task_number", 1);
 			packet->setDataByName("onscreen_update", 1);
 			packet->setDataByName("onscreen_update_text", completed_description.c_str());
-			if(updateStep)
+			if (updateStep)
 				packet->setDataByName("onscreen_update_icon", updateStep->GetIcon());
 			else
 				packet->setDataByName("onscreen_update_icon", 0);
@@ -1021,28 +1032,28 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			map<int16, string>::iterator order_itr;
 			vector<QuestStep*>* steps = 0;
 			MQuestSteps.lock();
-			for(order_itr = task_group_order.begin(); order_itr != task_group_order.end(); order_itr++){
-			//The following is kind of crazy, but necessary to order the quests with completed ones first.  This is to make the packet like live's packet
-			//for(itr = task_group.begin(); itr != task_group.end(); itr++){
+			for (order_itr = task_group_order.begin(); order_itr != task_group_order.end(); order_itr++) {
+				//The following is kind of crazy, but necessary to order the quests with completed ones first.  This is to make the packet like live's packet
+				//for(itr = task_group.begin(); itr != task_group.end(); itr++){
 				bool complete = true;
-				if(task_group.count(order_itr->second) > 0){
+				if (task_group.count(order_itr->second) > 0) {
 					steps = &(task_group[order_itr->second]);
-					for(int32 i=0;i<steps->size();i++){
-						if(steps->at(i)->Complete() == false)
+					for (int32 i = 0; i < steps->size(); i++) {
+						if (steps->at(i)->Complete() == false)
 							complete = false;
 					}
-					if(complete){
-						for(int32 i=0;i<steps->size();i++){
-							if(i==0)
+					if (complete) {
+						for (int32 i = 0; i < steps->size(); i++) {
+							if (i == 0)
 								task_group_names[steps->at(i)] = order_itr->second;
 							primary_order.push_back(steps->at(i));
 						}
 						task_groups_completed++;
 						total_task_groups++;
 					}
-					else{
-						for(int32 i=0;i<steps->size();i++){
-							if(i==0)
+					else {
+						for (int32 i = 0; i < steps->size(); i++) {
+							if (i == 0)
 								task_group_names[steps->at(i)] = order_itr->second;
 							secondary_order.push_back(steps->at(i));
 						}
@@ -1052,44 +1063,44 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			}
 			packet->setDataByName("task_groups_completed", task_groups_completed);
 			packet->setArrayLengthByName("num_task_groups", total_task_groups);
-			if(IsTracked() /*display_quest_helper*/ && task_groups_completed < total_task_groups)
+			if (IsTracked() /*display_quest_helper*/ && task_groups_completed < total_task_groups)
 				packet->setDataByName("display_quest_helper", 1);
 			int16 index = 0;
 			QuestStep* step = 0;
-			for(int32 i=0;i<primary_order.size();i++){
-				if(primary_order[i]->GetTaskGroup()){
-					if(task_group_names.count(primary_order[i]) > 0)
+			for (int32 i = 0; i < primary_order.size(); i++) {
+				if (primary_order[i]->GetTaskGroup()) {
+					if (task_group_names.count(primary_order[i]) > 0)
 						packet->setArrayDataByName("task_group", primary_order[i]->GetTaskGroup(), index);
 					else
 						continue;
 					packet->setSubArrayLengthByName("num_tasks", task_group[primary_order[i]->GetTaskGroup()].size(), index);
 					packet->setSubArrayLengthByName("num_updates", task_group[primary_order[i]->GetTaskGroup()].size(), index);
 					map_data_count += task_group[primary_order[i]->GetTaskGroup()].size();
-					if(task_group[primary_order[i]->GetTaskGroup()].size() > 0)
+					if (task_group[primary_order[i]->GetTaskGroup()].size() > 0)
 						packet->setDataByName("bullets", 1);
-					for(int32 x=0;x<task_group[primary_order[i]->GetTaskGroup()].size();x++){
+					for (int32 x = 0; x < task_group[primary_order[i]->GetTaskGroup()].size(); x++) {
 						step = task_group[primary_order[i]->GetTaskGroup()].at(x);
-						if(!step)
+						if (!step)
 							continue;
-						if(step->GetDescription())
+						if (step->GetDescription())
 							packet->setSubArrayDataByName("task", step->GetDescription(), index, x);
 						packet->setSubArrayDataByName("task_completed", 1, index, x);
 						packet->setSubArrayDataByName("index", x, index, x);
 						packet->setSubArrayDataByName("update_currentval", step->GetQuestCurrentQuantity(), index, x);
 						packet->setSubArrayDataByName("update_maxval", step->GetQuestNeededQuantity(), index, x);
-						if(step->GetUpdateTargetName())
+						if (step->GetUpdateTargetName())
 							packet->setSubArrayDataByName("update_target_name", step->GetUpdateTargetName(), index, x);
 						packet->setSubArrayDataByName("icon", step->GetIcon(), index, x);
-						if(updateStep && step == updateStep){
+						if (updateStep && step == updateStep) {
 							packet->setDataByName("update", 1);
-						//	packet->setDataByName("unknown5d", 1);
-							if(!quest_failure)
+							//	packet->setDataByName("unknown5d", 1);
+							if (!quest_failure)
 								packet->setDataByName("onscreen_update", 1);
 							packet->setDataByName("onscreen_update_count", update_count);
 							packet->setDataByName("onscreen_update_icon", step->GetIcon());
-							if(step->GetUpdateName())
+							if (step->GetUpdateName())
 								packet->setDataByName("onscreen_update_text", step->GetUpdateName());
-							else if(step->GetDescription())
+							else if (step->GetDescription())
 								packet->setDataByName("onscreen_update_text", step->GetDescription());
 							packet->setDataByName("update_task_number", x);
 							packet->setDataByName("update_taskgroup_number", index);
@@ -1098,19 +1109,19 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 					}
 					index++;
 				}
-				else{
-					if(task_group_names.count(primary_order[i]) > 0){
+				else {
+					if (task_group_names.count(primary_order[i]) > 0) {
 						step = primary_order[i];
-						if(updateStep && step == updateStep){
+						if (updateStep && step == updateStep) {
 							packet->setDataByName("update", 1);
-						//	packet->setDataByName("unknown5d", 1);
-							if(!quest_failure)
+							//	packet->setDataByName("unknown5d", 1);
+							if (!quest_failure)
 								packet->setDataByName("onscreen_update", 1);
 							packet->setDataByName("onscreen_update_count", update_count);
 							packet->setDataByName("onscreen_update_icon", step->GetIcon());
-							if(step->GetUpdateName())
+							if (step->GetUpdateName())
 								packet->setDataByName("onscreen_update_text", step->GetUpdateName());
-							else if(step->GetDescription())
+							else if (step->GetDescription())
 								packet->setDataByName("onscreen_update_text", step->GetDescription());
 							packet->setDataByName("update_task_number", i);
 							packet->setDataByName("update_taskgroup_number", index);
@@ -1120,24 +1131,24 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 					}
 				}
 			}
-			for(int32 i=0;i<secondary_order.size();i++){
-				if(secondary_order[i]->GetTaskGroup()){
-					if(task_group_names.count(secondary_order[i]) > 0)
+			for (int32 i = 0; i < secondary_order.size(); i++) {
+				if (secondary_order[i]->GetTaskGroup()) {
+					if (task_group_names.count(secondary_order[i]) > 0)
 						packet->setArrayDataByName("task_group", secondary_order[i]->GetTaskGroup(), index);
 					else
 						continue;
 					packet->setSubArrayLengthByName("num_tasks", task_group[secondary_order[i]->GetTaskGroup()].size(), index);
 					packet->setSubArrayLengthByName("num_updates", task_group[secondary_order[i]->GetTaskGroup()].size(), index);
 					map_data_count += task_group[secondary_order[i]->GetTaskGroup()].size();
-					if(task_group[secondary_order[i]->GetTaskGroup()].size() > 0)
+					if (task_group[secondary_order[i]->GetTaskGroup()].size() > 0)
 						packet->setDataByName("bullets", 1);
-					for(int32 x=0;x<task_group[secondary_order[i]->GetTaskGroup()].size();x++){
+					for (int32 x = 0; x < task_group[secondary_order[i]->GetTaskGroup()].size(); x++) {
 						step = task_group[secondary_order[i]->GetTaskGroup()].at(x);
-						if(!step)
+						if (!step)
 							continue;
-						if(step->GetDescription())
+						if (step->GetDescription())
 							packet->setSubArrayDataByName("task", step->GetDescription(), index, x);
-						if(step->Complete())
+						if (step->Complete())
 							packet->setSubArrayDataByName("task_completed", 1, index, x);
 						else
 							packet->setSubArrayDataByName("task_completed", 0, index, x);
@@ -1145,19 +1156,19 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 						packet->setSubArrayDataByName("update_currentval", step->GetQuestCurrentQuantity(), index, x);
 						packet->setSubArrayDataByName("update_maxval", step->GetQuestNeededQuantity(), index, x);
 						packet->setSubArrayDataByName("icon", step->GetIcon(), index, x);
-						if(step->GetUpdateTargetName())
+						if (step->GetUpdateTargetName())
 							packet->setSubArrayDataByName("update_target_name", step->GetUpdateTargetName(), index, x);
-						if(updateStep && step == updateStep){
+						if (updateStep && step == updateStep) {
 							packet->setDataByName("update", 1);
-							if(!quest_failure)
+							if (!quest_failure)
 								packet->setDataByName("onscreen_update", 1);
 							packet->setDataByName("onscreen_update_count", update_count);
 							packet->setDataByName("onscreen_update_icon", step->GetIcon());
-							if(step->GetUpdateName())
+							if (step->GetUpdateName())
 								packet->setDataByName("onscreen_update_text", step->GetUpdateName());
-							else if(step->GetDescription())
+							else if (step->GetDescription())
 								packet->setDataByName("onscreen_update_text", step->GetDescription());
-							if(quest_failure)
+							if (quest_failure)
 								packet->setDataByName("onscreen_update_text2", "failed");
 							packet->setDataByName("update_task_number", x);
 							packet->setDataByName("update_taskgroup_number", index);
@@ -1166,23 +1177,23 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 					}
 					index++;
 				}
-				else{
-					if(task_group_names.count(secondary_order[i]) > 0){
+				else {
+					if (task_group_names.count(secondary_order[i]) > 0) {
 						step = secondary_order[i];
-						if(updateStep && step == updateStep){
+						if (updateStep && step == updateStep) {
 							packet->setDataByName("update", 1);
-							if(!quest_failure)
+							if (!quest_failure)
 								packet->setDataByName("onscreen_update", 1);
 							packet->setDataByName("onscreen_update_count", update_count);
 							packet->setDataByName("onscreen_update_icon", step->GetIcon());
-							if(step->GetUpdateName())
+							if (step->GetUpdateName())
 								packet->setDataByName("onscreen_update_text", step->GetUpdateName());
-							else if(step->GetDescription())
+							else if (step->GetDescription())
 								packet->setDataByName("onscreen_update_text", step->GetDescription());
 							packet->setDataByName("update_task_number", i);
 							packet->setDataByName("update_taskgroup_number", index);
 						}
-						if(task_group_names.size() == 1){
+						if (task_group_names.size() == 1) {
 							packet->setSubArrayLengthByName("num_tasks", 1, index);
 							packet->setSubArrayDataByName("task", secondary_order[i]->GetDescription(), index);
 							packet->setDataByName("bullets", 0);
@@ -1197,76 +1208,87 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 			for (int16 i = 0; i < total_task_groups; i++)
 				packet->setArrayDataByName("unknown4", 0xFFFFFFFF, i);
 
-			MQuestSteps.unlock();
+			if (step->GetItemID() > 0) {
+				packet->setArrayLengthByName("usable_item_count", 1);
+				Item* item = player->GetPlayerItemList()->GetItemFromID(step->GetItemID(), 1);
+				if (item) {
+					packet->setArrayDataByName("item_id", item->details.item_id, 0);
+					packet->setArrayDataByName("item_unique_id", item->details.unique_id, 0);
+					packet->setArrayDataByName("item_icon", item->details.icon, 0);
+					packet->setArrayDataByName("unknown2", 0xFFFFFFFF, 0);//item->details.item_id, 0);
 
-			
-			string reward_str = "";
-			if (version >= 1096)
-				reward_str = "reward_data_";
-			string tmp = reward_str + "reward";
-			packet->setDataByName(tmp.c_str(), "Quest Reward!");
-			if(reward_coins > 0){
-				tmp = reward_str + "min_coin";
-				packet->setDataByName(tmp.c_str(), reward_coins);
-				tmp = reward_str + "max_coin";
-				packet->setDataByName(tmp.c_str(), reward_coins_max);
-			}
-			tmp = reward_str + "status_points";
-			packet->setDataByName(tmp.c_str(), reward_status);
-			if(reward_comment.length() > 0) {
-				tmp = reward_str + "text";
-				packet->setDataByName(tmp.c_str(), reward_comment.c_str());
-			}
-			if(reward_items.size() > 0){
-				tmp = reward_str + "num_rewards";
-				packet->setArrayLengthByName(tmp.c_str(), reward_items.size());
-				Item* item = 0;
-				for(int32 i=0;i<reward_items.size();i++){
-					item = reward_items[i];
-					packet->setArrayDataByName("reward_id", item->details.item_id, i);
-					if(version < 860)
-						packet->setItemArrayDataByName("item", item, player, i, 0, -1);
-					else if (version < 1193)
-						packet->setItemArrayDataByName("item", item, player, i);
-					else
-						packet->setItemArrayDataByName("item", item, player, i, 0, 2);
-				}
-			}
-			if(selectable_reward_items.size() > 0){
-				tmp = reward_str + "num_select_rewards";
-				packet->setArrayLengthByName(tmp.c_str(), selectable_reward_items.size());
-				Item* item = 0;
-				for(int32 i=0;i<selectable_reward_items.size();i++){
-					item = selectable_reward_items[i];
-					packet->setArrayDataByName("select_reward_id", item->details.item_id, i);
-					if(version < 860)
-						packet->setItemArrayDataByName("select_item", item, player, i, 0, -1);
-					else if (version < 1193)
-						packet->setItemArrayDataByName("select_item", item, player, i);
-					else
-						packet->setItemArrayDataByName("select_item", item, player, i, 0, 2);
-				} 
-			}
-			map<int32, sint32>* reward_factions = GetRewardFactions();
-			if (reward_factions && reward_factions->size() > 0) {
-				tmp = reward_str + "num_factions";
-				packet->setArrayLengthByName(tmp.c_str(), reward_factions->size());
-				map<int32, sint32>::iterator itr;
-				int16 index = 0;
-				for (itr = reward_factions->begin(); itr != reward_factions->end(); itr++) {
-					int32 faction_id = itr->first;
-					sint32 amount = itr->second;
-					const char* faction_name = master_faction_list.GetFactionNameByID(faction_id);
-					if (faction_name) {
-						packet->setArrayDataByName("faction_name", const_cast<char*>(faction_name), index);
-						packet->setArrayDataByName("amount", amount, index);
-					}
-					index++;
 				}
 			}
 		}
+		MQuestSteps.unlock();
 
-		packet->setArrayLengthByName("map_data_array_size", map_data_count);
+
+		string reward_str = "";
+		if (version >= 1096)
+			reward_str = "reward_data_";
+		string tmp = reward_str + "reward";
+		packet->setDataByName(tmp.c_str(), "Quest Reward!");
+		if (reward_coins > 0) {
+			tmp = reward_str + "min_coin";
+			packet->setDataByName(tmp.c_str(), reward_coins);
+			tmp = reward_str + "max_coin";
+			packet->setDataByName(tmp.c_str(), reward_coins_max);
+		}
+		tmp = reward_str + "status_points";
+		packet->setDataByName(tmp.c_str(), reward_status);
+		if (reward_comment.length() > 0) {
+			tmp = reward_str + "text";
+			packet->setDataByName(tmp.c_str(), reward_comment.c_str());
+		}
+		if (reward_items.size() > 0) {
+			tmp = reward_str + "num_rewards";
+			packet->setArrayLengthByName(tmp.c_str(), reward_items.size());
+			Item* item = 0;
+			for (int32 i = 0; i < reward_items.size(); i++) {
+				item = reward_items[i];
+				packet->setArrayDataByName("reward_id", item->details.item_id, i);
+				if (version < 860)
+					packet->setItemArrayDataByName("item", item, player, i, 0, -1);
+				else if (version < 1193)
+					packet->setItemArrayDataByName("item", item, player, i);
+				else
+					packet->setItemArrayDataByName("item", item, player, i, 0, 2);
+			}
+		}
+		if (selectable_reward_items.size() > 0) {
+			tmp = reward_str + "num_select_rewards";
+			packet->setArrayLengthByName(tmp.c_str(), selectable_reward_items.size());
+			Item* item = 0;
+			for (int32 i = 0; i < selectable_reward_items.size(); i++) {
+				item = selectable_reward_items[i];
+				packet->setArrayDataByName("select_reward_id", item->details.item_id, i);
+				if (version < 860)
+					packet->setItemArrayDataByName("select_item", item, player, i, 0, -1);
+				else if (version < 1193)
+					packet->setItemArrayDataByName("select_item", item, player, i);
+				else
+					packet->setItemArrayDataByName("select_item", item, player, i, 0, 2);
+			}
+		}
+		map<int32, sint32>* reward_factions = GetRewardFactions();
+		if (reward_factions && reward_factions->size() > 0) {
+			tmp = reward_str + "num_factions";
+			packet->setArrayLengthByName(tmp.c_str(), reward_factions->size());
+			map<int32, sint32>::iterator itr;
+			int16 index = 0;
+			for (itr = reward_factions->begin(); itr != reward_factions->end(); itr++) {
+				int32 faction_id = itr->first;
+				sint32 amount = itr->second;
+				const char* faction_name = master_faction_list.GetFactionNameByID(faction_id);
+				if (faction_name) {
+					packet->setArrayDataByName("faction_name", const_cast<char*>(faction_name), index);
+					packet->setArrayDataByName("amount", amount, index);
+				}
+				index++;
+			}
+		}
+
+		//packet->setArrayLengthByName("map_data_array_size", map_data_count);
 
 		EQ2Packet* outapp = packet->serialize();
 		//packet->PrintPacket();
@@ -1274,6 +1296,7 @@ EQ2Packet* Quest::QuestJournalReply(int16 version, int32 player_crc, Player* pla
 		safe_delete(packet);
 		return outapp;
 	}
+
 	return 0;
 }
 
@@ -1364,8 +1387,8 @@ bool Quest::RemoveQuestStep(int32 step, Client* client) {
 	return ret;
 }
 
-QuestStep* Quest::AddQuestStep(int32 id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage){
-	QuestStep* step = new QuestStep(id, in_type, in_description, in_ids, in_quantity, in_task_group, in_locations, in_max_variation, in_percentage);
+QuestStep* Quest::AddQuestStep(int32 id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage,int32 in_usableitemid){
+	QuestStep* step = new QuestStep(id, in_type, in_description, in_ids, in_quantity, in_task_group, in_locations, in_max_variation, in_percentage, in_usableitemid);
 	if(!AddQuestStep(step)){
 		safe_delete(step);
 		return 0;

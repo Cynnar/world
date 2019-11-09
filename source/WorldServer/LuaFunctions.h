@@ -396,4 +396,13 @@ int EQ2Emu_lua_RemoveCoin(lua_State* state);
 int EQ2Emu_lua_GetPlayersInZone(lua_State* state);
 int EQ2Emu_lua_SetSpawnAnimation(lua_State* state);
 int EQ2Emu_lua_GetClientVersion(lua_State* state);
+int EQ2Emu_lua_GetItemID(lua_State* state);
+int EQ2Emu_lua_IsEntity(lua_State* state);
+int EQ2Emu_lua_GetOrigX(lua_State* state);
+int EQ2Emu_lua_GetOrigY(lua_State* state);
+int EQ2Emu_lua_GetOrigZ(lua_State* state);
+int EQ2Emu_lua_GetPCTOfHP(lua_State* state);
+int EQ2Emu_lua_GetPCTOfPower(lua_State* state);
+int EQ2Emu_lua_GetBoundZoneID(lua_State* state);
+int EQ2Emu_lua_Evac(lua_State* state);
 #endif

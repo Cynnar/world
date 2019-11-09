@@ -41,6 +41,8 @@ struct BonusValues{
 	int16	type;
 	sint32	value;
 	int64	class_req;
+	vector<int16>	race_req;
+	vector<int16>	faction_req;
 	LuaSpell* luaspell;
 };
 
@@ -136,16 +138,16 @@ struct InfoStruct{
 	int16			deflection_base;
 	int16			block;
 	int16			block_base;
-	int16			str;
-	int16			sta;
-	int16			agi;
-	int16			wis;
-	int16			intel;
-	int16			str_base;
-	int16			sta_base;
-	int16			agi_base;
-	int16			wis_base;
-	int16			intel_base;
+	float			str; //int16
+	float			sta; //int16
+	float			agi;//int16
+	float			wis;//int16
+	float			intel;//int16
+	float			str_base;//int16
+	float			sta_base;//int16
+	float			agi_base;//int16
+	float			wis_base;//int16
+	float			intel_base;//int16
 	int16			heat;
 	int16			cold;
 	int16			magic;
@@ -637,11 +639,11 @@ public:
 	EQ2_Equipment	equipment;
 	CharFeatures	features;	
 
-	void AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req = 0);
+	void AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req =0, vector<int16> race_req = vector<int16>(), vector<int16> faction_req = vector<int16>());
 	BonusValues* GetSpellBonus(int32 spell_id);
 	vector<BonusValues*>* GetAllSpellBonuses(LuaSpell* spell);
 	bool CheckSpellBonusRemoval(LuaSpell* spell, int16 type);
-	void RemoveSpellBonus(LuaSpell* spell);
+	void RemoveSpellBonus(const LuaSpell* spell);
 	void CalculateSpellBonuses(ItemStatsValues* stats);
 	void AddMezSpell(LuaSpell* spell);
 	void RemoveMezSpell(LuaSpell* spell);

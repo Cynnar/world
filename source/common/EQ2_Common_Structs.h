@@ -192,6 +192,7 @@ struct AppearanceData {
 	int8			race;
 	int8			gender;	
 	int32			randomize;
+	int8			lua_race_id;
 };
 struct Player_Update{
 /*0000*/	int32	activity;

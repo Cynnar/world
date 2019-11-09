@@ -199,7 +199,10 @@ void Spawn::InitializeVisPacketData(Player* player, PacketStruct* vis_packet) {
 			int8 quest_flag = player->CheckQuestFlag(this);
 			if (version < 1188 && quest_flag >= 16)
 				quest_flag = 1;
-			vis_packet->setDataByName("quest_flag", quest_flag);
+			vis_packet->setDataByName("quest_flag",quest_flag);
+			if( player->CheckQuestsKillUpdate(this, false)){
+			vis_packet->setDataByName("name_quest_icon", 1);
+			}
 		}
 	}
 

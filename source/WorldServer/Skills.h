@@ -81,21 +81,21 @@ public:
 	bool HasSkill(int32 skill_id);
 	Skill* GetSkill(int32 skill_id);
 
-	void IncreaseSkill(Skill* skill, int8 amount);
-	void IncreaseSkill(int32 skill_id, int8 amount);
-	void DecreaseSkill(Skill* skill, int8 amount);
-	void DecreaseSkill(int32 skill_id, int8 amount);
+	void IncreaseSkill(Skill* skill, int16 amount);
+	void IncreaseSkill(int32 skill_id, int16 amount);
+	void DecreaseSkill(Skill* skill, int16 amount);
+	void DecreaseSkill(int32 skill_id, int16 amount);
 	void SetSkill(Skill* skill, int16 value);
 	void SetSkill(int32 skill_id, int16 value);
 
-	void IncreaseSkillCap(Skill* skill, sint8 amount);
-	void IncreaseSkillCap(int32 skill_id, int8 amount);
-	void DecreaseSkillCap(Skill* skill, int8 amount);
-	void DecreaseSkillCap(int32 skill_id, int8 amount);
+	void IncreaseSkillCap(Skill* skill, int16 amount);
+	void IncreaseSkillCap(int32 skill_id, int16 amount);
+	void DecreaseSkillCap(Skill* skill, int16 amount);
+	void DecreaseSkillCap(int32 skill_id, int16 amount);
 	void SetSkillCap(Skill* skill, int16 value);
 	void SetSkillCap(int32 skill_id, int16 value);
-	void IncreaseAllSkillCaps(sint8 value);
-	void IncreaseSkillCapsByType(int8 type, sint8 value);
+	void IncreaseAllSkillCaps(int16 value);
+	void IncreaseSkillCapsByType(int8 type, int16 value);
 	void SetSkillCapsByType(int8 type, int16 value);
 	void AddSkillUpdateNeeded(Skill* skill);
 

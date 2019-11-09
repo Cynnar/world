@@ -359,7 +359,7 @@ bool Entity::SpellAttack(Spawn* victim, float distance, LuaSpell* luaspell, int8
 
 	Spell* spell = luaspell->spell;
 	float bonus = 0;
-	Skill* skill = 0;
+	Skill* skill = nullptr;
 	if(spell->GetSpellData()->resistibility > 0)
 		bonus -= (1 - spell->GetSpellData()->resistibility)*100;
 	skill = master_skill_list.GetSkill(spell->GetSpellData()->mastery_skill);
@@ -395,7 +395,7 @@ bool Entity::SpellAttack(Spawn* victim, float distance, LuaSpell* luaspell, int8
 		CheckProcs(PROC_TYPE_MAGICAL_OFFENSIVE, victim);
 
 		if(spell->GetSpellData()->success_message.length() > 0){
-			Client* client = 0;
+			Client* client = nullptr;
 			if(IsPlayer())
 				client = GetZone()->GetClientBySpawn(this);
 			if(client){
@@ -403,7 +403,8 @@ bool Entity::SpellAttack(Spawn* victim, float distance, LuaSpell* luaspell, int8
 				if(success_message.find("%t") < 0xFFFFFFFF)
 					success_message.replace(success_message.find("%t"), 2, victim->GetName());
 				client->Message(CHANNEL_COLOR_SPELL, success_message.c_str());
-				GetZone()->SendDamagePacket(this, victim, DAMAGE_PACKET_TYPE_SPELL_DAMAGE, hit_result, damage_type, 0, spell->GetName());
+				//commented out the following line as it was causing a duplicate message EmemJR 5/4/2019
+				//GetZone()->SendDamagePacket(this, victim, DAMAGE_PACKET_TYPE_SPELL_DAMAGE, hit_result, damage_type, 0, spell->GetName()); 
 			}
 		}
 		if(spell->GetSpellData()->effect_message.length() > 0){

@@ -119,8 +119,8 @@ Client::Client(EQStream* ieqs) : pos_update(125), quest_pos_timer(2000), lua_deb
 	eqs = ieqs;
 	ip = eqs->GetrIP();
 	port = ntohs(eqs->GetrPort());
-	merchant_transaction = 0;
-	SetMailTransaction(0);
+	merchant_transaction = nullptr;
+	SetMailTransaction(nullptr);
 	timestamp_flag = 0;
 	current_quest_id = 0;
 	last_update_time = 0;
@@ -3589,6 +3589,7 @@ void Client::ChangeLevel(int16 old_level, int16 new_level){
 	// to when you are actually able to select traits.
 	QueuePacket(GetPlayer()->GetPlayerInfo()->serialize(GetVersion()));
 	QueuePacket(master_trait_list.GetTraitListPacket(this));
+	master_aa_list.DisplayAA(this, 0, 0);
 
 	if (GetPlayer()->SpawnedBots.size() > 0) {
 		map<int32, int32>::iterator itr;

@@ -114,6 +114,8 @@ struct TransportDestination{
 
 	int32	map_x;
 	int32	map_y;
+	int32	faction_id;
+	int32	faction_value;
 };
 
 struct LocationTransportDestination{
@@ -129,6 +131,8 @@ struct LocationTransportDestination{
 	float	trigger_z;
 	float	trigger_radius;
 	int32	cost;
+	int32	faction_id;
+	int32	faction_value;
 };
 
 //ideally we wouldn't need to store this information as we could get it from the Client object, 
@@ -301,7 +305,7 @@ struct PlayerHistory {
 	bool	save_needed;
 };
 
-struct ZoneLoot {
+struct GlobalLoot {
 	int8	minLevel;
 	int8	maxLevel;
 	int32	table_id;

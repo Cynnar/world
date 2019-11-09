@@ -850,14 +850,14 @@ int EQ2Emu_lua_SpellHeal(lua_State* state){
    if(caster && caster->IsEntity()){
 	  bool success = false;
       luaspell->resisted = false;
-      if (target) {
-         float distance = caster->GetDistance(target, true);
-         distance -= caster->appearance.pos.collision_radius/10;
-         distance -= target->appearance.pos.collision_radius/10;
-         if (((Entity*)caster)->SpellHeal(target, distance, luaspell, heal_type, min_heal, max_heal, crit_mod, no_calcs))
-            success = true;
-      }
-	  else if (luaspell->targets.size() > 0) {
+  if (target) {
+	   float distance = caster->GetDistance(target, true);
+	   distance -= caster->appearance.pos.collision_radius / 10;
+	   distance -= target->appearance.pos.collision_radius / 10;
+	   if (((Entity*)caster)->SpellHeal(target, distance, luaspell, heal_type, min_heal, max_heal, crit_mod, no_calcs))
+		   success = true;
+   }
+	  if (luaspell->targets.size() > 0) {
 		  Spawn* target = 0;
 		  ZoneServer* zone = luaspell->caster->GetZone();
 		 luaspell->MSpellTargets.readlock(__FUNCTION__, __LINE__);
@@ -1157,6 +1157,7 @@ int EQ2Emu_lua_SpellDamage(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* target = lua_interface->GetSpawn(state);
+	int32 target_id = target->GetID();
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
 	if(!luaspell)
 		return 0;
@@ -1166,31 +1167,83 @@ int EQ2Emu_lua_SpellDamage(lua_State* state){
 	int32 max_damage = lua_interface->GetInt32Value(state, 4);
 	int8 crit_mod = lua_interface->GetInt32Value(state, 5);
 	bool no_calcs = lua_interface->GetInt32Value(state, 6) == 1;
-	lua_interface->ResetFunctionStack(state);
+	//lua_interface->ResetFunctionStack(state);
+	int32 class_id = lua_interface->GetInt32Value(state, 7);
+	vector<int16> faction_req;
+	vector<int16> race_req;
+	int32 class_req = 0;
+	int32 i = 0;
+	int8 f = 0;
+	int8 r = 0;
+	while ((class_id = lua_interface->GetInt32Value(state, 7 + i))) {
+		if (class_id < 100) {
+			class_req += pow(2.0, double(class_id - 1));
+		}
+		else if (class_id > 100 && class_id < 1000) {
+			race_req.push_back(class_id);
+			r++;
+		}
+		else {
+			faction_req.push_back(class_id);
+			f++;
+		}
+		i++;
+	}
 	if(caster && caster->IsEntity()){
+		bool race_match = false;
 		bool success = false;
 		luaspell->resisted = false;
-		if (luaspell->targets.size() > 0) {
+		if (luaspell->initial_target == target_id) {
+			int xxx = 0;
+		}
+		if (luaspell->targets.size() > 0 && (luaspell->initial_target != target_id)) {
 			ZoneServer* zone = luaspell->caster->GetZone();
 			Spawn* target = 0;
 			luaspell->MSpellTargets.readlock(__FUNCTION__, __LINE__);
 			for (int32 i = 0; i < luaspell->targets.size(); i++) {
 				if ((target = zone->GetSpawnByID(luaspell->targets[i]))) {
-					float distance = caster->GetDistance(target, true);
-					distance -= caster->appearance.pos.collision_radius/10;
-					distance -= target->appearance.pos.collision_radius/10;
-					((Entity*)caster)->SpellAttack(target, distance, luaspell, type, min_damage, max_damage, crit_mod, no_calcs);
+
+					if (race_req.size() > 0) {
+						for (int8 i=0; i < race_req.size(); i++) {
+
+							int32 xxx = target->GetLuaRaceId();
+							if (target->GetLuaRaceId() == race_req[i]) {
+								race_match = true;
+							}
+						}
+					}
+					else
+						race_match = true; // if the race_req.size = 0 then there is no race requirement and the race_match will be true
+					if (race_match == true) {
+						float distance = caster->GetDistance(target, true);
+						distance -= caster->appearance.pos.collision_radius / 10;
+						distance -= target->appearance.pos.collision_radius / 10;
+						((Entity*)caster)->SpellAttack(target, distance, luaspell, type, min_damage, max_damage, crit_mod, no_calcs);
+					}
 				}
 			}
 			success = true;
 			luaspell->MSpellTargets.releasereadlock(__FUNCTION__, __LINE__);
 		}
 		else if (target) {
-			float distance = caster->GetDistance(target, true);
-			distance -= caster->appearance.pos.collision_radius/10;
-			distance -= target->appearance.pos.collision_radius/10;
-			if (((Entity*)caster)->SpellAttack(target, distance, luaspell, type, min_damage, max_damage, crit_mod, no_calcs))
-				success = true;
+
+			//check class and race/faction here
+			if (race_req.size() > 0) {
+				for (int8 i= 0; i < race_req.size(); i++) {
+					if (target->GetLuaRaceId() == race_req[i]) {
+						race_match = true;
+					}
+				}
+			}
+			else
+				race_match = true; // if the race_req.size = 0 then there is no race requirement and the race_match will be true
+			if (race_match == true) {
+				float distance = caster->GetDistance(target, true);
+				distance -= caster->appearance.pos.collision_radius / 10;
+				distance -= target->appearance.pos.collision_radius / 10;
+				if (((Entity*)caster)->SpellAttack(target, distance, luaspell, type, min_damage, max_damage, crit_mod, no_calcs))
+					success = true;
+			}
 		}
 		if (success) {
 			Spell* spell = luaspell->spell;
@@ -1278,6 +1331,10 @@ int EQ2Emu_lua_SetMaxHP(lua_State* state){
 	lua_interface->ResetFunctionStack(state);
 	if (spawn && spawn->IsEntity() && value > 0)
 		((Entity*)spawn)->AddSpellBonus(0, ITEM_STAT_HEALTH, value - spawn->GetTotalHP());
+
+	if (spawn->IsPlayer())
+		((Player*)spawn)->SetCharSheetChanged(true);
+
 	return 0;
 }
 
@@ -1531,15 +1588,29 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	int16 type = lua_interface->GetInt16Value(state, 2);
-	float value = lua_interface->GetFloatValue(state, 3);
+	const int16 type = lua_interface->GetInt16Value(state, 2);
+	const float value = lua_interface->GetFloatValue(state, 3);
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
 
 	int64 class_req = 0;
 	int32 class_id = 0;
+	vector<int16> faction_req;
+	vector<int16> race_req;
 	int32 i = 0;
+	int8 f = 0;
+	int8 r = 0;
 	while((class_id = lua_interface->GetInt32Value(state, 4 + i))) {
-		class_req += pow(2.0, (double)(class_id - 1));
+		if (class_id < 100) {
+			class_req += pow(2.0, double(class_id - 1));
+		}
+		else if (class_id > 100 && class_id < 1000) {
+			race_req.push_back(class_id);
+			r++;
+		}
+		else {
+			faction_req.push_back(class_id);
+			f++;
+		}
 		i++;
 	}
 
@@ -1551,13 +1622,14 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 				Spawn* target = zone->GetSpawnByID(luaspell->targets[i]);
 				if (target) {
 					if (target->IsPlayer()) {
-						((Player*)target)->AddSpellBonus(luaspell, type, value, class_req);
+						((Player*)target)->AddSpellBonus(luaspell, type, value, class_req, race_req, faction_req);
+						LogWrite(LUA__ERROR, 0, "LUA", "Applying Spell Bonus to Player  '%s'.  Is a Group Member.", ((Player*)target)->GetName());
 						if (((Player*)target)->GetGroupMemberInfo())
 							((Player*)target)->UpdateGroupMemberInfo();
 						((Player*)target)->SetCharSheetChanged(true);
 					}
 					else if (target->IsNPC())
-						((NPC*)target)->AddSpellBonus(luaspell, type, value, class_req);
+						((NPC*)target)->AddSpellBonus(luaspell, type, value, class_req,race_req, faction_req);
 					else
 						lua_interface->SimpleLogError("Error applying spell bonus on non entity.");
 				}
@@ -1567,7 +1639,8 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 				luaspell->effect_bitmask += EFFECT_FLAG_SPELLBONUS;
 		}
 		else if (spawn && spawn->IsEntity()) {
-			((Entity*)spawn)->AddSpellBonus(luaspell, type, value, class_req);
+			((Entity*)spawn)->AddSpellBonus(luaspell, type, value, class_req, race_req, faction_req);
+			LogWrite(LUA__ERROR, 0, "LUA", "Applying Spell Bonus to Entity  '%s'.  Is a Group Member.", ((Entity*)spawn)->GetName());
 			if(spawn->IsPlayer())
 				((Player*)spawn)->SetCharSheetChanged(true);
 		}
@@ -1609,14 +1682,29 @@ int EQ2Emu_lua_AddSpawnSpellBonus(lua_State* state){
 	}
 
 	int32 class_req = 0;
+	vector<int16> faction_req;
+	vector<int16> race_req;
 	int32 class_id = 0;
 	int32 i = 0;
-	while((class_id = lua_interface->GetInt32Value(state, 4 + i))) {
-		class_req += pow(2.0, (double)(class_id - 1));
+	int8 f = 0;
+	int8 r = 0;
+	while ((class_id = lua_interface->GetInt32Value(state, 4 + i))) {
+		if (class_id < 100) {
+			class_req += pow(2.0, double(class_id - 1));
+		}
+		else if (class_id > 100 && class_id < 1000) {
+			race_req.push_back(class_id);
+			r++;
+		}
+		else {
+			faction_req.push_back(class_id);
+			f++;
+		}
 		i++;
 	}
 
-	((Entity*)spawn)->AddSpellBonus(luaspell, type, value, class_req);
+
+	((Entity*)spawn)->AddSpellBonus(luaspell, type, value, class_req,race_req,faction_req);
 	if (!(luaspell->effect_bitmask & EFFECT_FLAG_SPELLBONUS))
 		luaspell->effect_bitmask += EFFECT_FLAG_SPELLBONUS;
 	if(spawn->IsPlayer())
@@ -2871,10 +2959,11 @@ int EQ2Emu_lua_AddQuestStep(lua_State* state) {
 		float percentage = lua_interface->GetFloatValue(state, 5);
 		string str_taskgroup = lua_interface->GetStringValue(state, 6);
 		int16 icon = lua_interface->GetInt16Value(state, 7);
+		int32 usableitemid = lua_interface->GetInt32Value(state, 8);
 		const char* taskgroup = 0;
 		if(str_taskgroup.length() > 0)
 			taskgroup = str_taskgroup.c_str();
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_NORMAL, description, 0, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_NORMAL, description, 0, quantity, taskgroup, 0, 0, percentage, usableitemid);
 		if (quest_step && icon && quantity > 0)
 			quest_step->SetIcon(icon);
 	}
@@ -2897,6 +2986,8 @@ int EQ2Emu_lua_AddQuestStepKill(lua_State* state){
 			taskgroup = str_taskgroup.c_str();
 		int32 npc_id = 0;
 		vector<int32>* ids = 0;
+		
+		Spawn* spawn = nullptr;
 		int i=0;
 		while((npc_id = lua_interface->GetInt32Value(state, 8+i))){
 			if(ids == 0)
@@ -2904,7 +2995,7 @@ int EQ2Emu_lua_AddQuestStepKill(lua_State* state){
 			ids->push_back(npc_id);
 			i++;
 		}
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_KILL, description, ids, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_KILL, description, ids, quantity, taskgroup, 0, 0, percentage,0);
 		if(quest_step && icon > 0 && quantity > 0)
 				quest_step->SetIcon(icon);
 	}
@@ -2967,7 +3058,7 @@ int EQ2Emu_lua_AddQuestStepObtainItem(lua_State* state){
 			ids->push_back(item_id);
 			i++;
 		}
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_OBTAIN_ITEM, description, ids, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_OBTAIN_ITEM, description, ids, quantity, taskgroup, 0, 0, percentage,0);
 		if (quest_step && icon > 0 && quantity > 0)
 			quest_step->SetIcon(icon);
 	}
@@ -3007,7 +3098,39 @@ int EQ2Emu_lua_AddQuestStepLocation(lua_State* state){
 	}
 	return 0;
 }
-
+int EQ2Emu_lua_AddQuestUsableItem(lua_State* state){
+	if (!lua_interface)
+		return 0;
+	Quest* quest = lua_interface->GetQuest(state);
+	if (quest){
+		int32 step = lua_interface->GetInt32Value(state, 2);
+		string description = lua_interface->GetStringValue(state, 3);
+		float max_variation = lua_interface->GetFloatValue(state, 4);
+		string str_taskgroup = lua_interface->GetStringValue(state, 5);
+		int16 icon = lua_interface->GetInt16Value(state, 6);
+		const char* taskgroup = 0;
+		if (str_taskgroup.length() > 0)
+			taskgroup = str_taskgroup.c_str();
+		vector<Location>* locations = 0;
+		int i = 7;
+		while (true) {
+			Location loc;
+			loc.x = lua_interface->GetFloatValue(state, i);
+			loc.y = lua_interface->GetFloatValue(state, i + 1);
+			loc.z = lua_interface->GetFloatValue(state, i + 2);
+			if (loc.x == 0 && loc.y == 0 && loc.z == 0)
+				break;
+			if (locations == 0)
+				locations = new vector<Location>;
+			locations->push_back(loc);
+			i += 3;
+		}
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_LOCATION, description, 0, 1, taskgroup, locations, max_variation);
+		if (quest_step && icon > 0)
+			quest_step->SetIcon(icon);
+	}
+	return 0;
+}
 int EQ2Emu_lua_AddQuestStepSpell(lua_State* state) {
 	Quest* quest = lua_interface->GetQuest(state);
 	if(quest) {
@@ -3029,7 +3152,7 @@ int EQ2Emu_lua_AddQuestStepSpell(lua_State* state) {
 			ids->push_back(spell_id);
 			i++;
 		}
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_SPELL, description, ids, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_SPELL, description, ids, quantity, taskgroup, 0, 0, percentage,0);
 		if(quest_step && icon > 0 && quantity > 0)
 				quest_step->SetIcon(icon);
 	}
@@ -3059,7 +3182,7 @@ int EQ2Emu_lua_AddQuestStepCraft(lua_State* state){
 			ids->push_back(item_id);
 			i++;
 		}
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_CRAFT, description, ids, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_CRAFT, description, ids, quantity, taskgroup, 0, 0, percentage,0);
 		if (quest_step && icon > 0 && quantity > 0)
 			quest_step->SetIcon(icon);
 	}
@@ -3089,7 +3212,7 @@ int EQ2Emu_lua_AddQuestStepHarvest(lua_State* state){
 			ids->push_back(item_id);
 			i++;
 		}
-		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_HARVEST, description, ids, quantity, taskgroup, 0, 0, percentage);
+		QuestStep* quest_step = quest->AddQuestStep(step, QUEST_STEP_TYPE_HARVEST, description, ids, quantity, taskgroup, 0, 0, percentage,0);
 		if (quest_step && icon > 0 && quantity > 0)
 			quest_step->SetIcon(icon);
 	}
@@ -3240,15 +3363,41 @@ int EQ2Emu_lua_Bind(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* spawn = lua_interface->GetSpawn(state);
-	if(spawn){
-		if(spawn->IsPlayer()){
-			Client* client = spawn->GetZone()->GetClientBySpawn(spawn);
-			if(client){
-				if(!client->Bind())
-					client->SimpleMessage(CHANNEL_COLOR_RED, "Unable to set bind point.");
-			}
-		}
+	int32 zone_id = lua_interface->GetInt32Value(state, 2);
+	float x = lua_interface->GetFloatValue(state, 3);
+	float y = lua_interface->GetFloatValue(state, 4);
+	float z = lua_interface->GetFloatValue(state, 5);
+	float h = lua_interface->GetFloatValue(state, 6);
+
+	if (!spawn) {
+		lua_interface->LogError("LUA Bind command error: spawn is not valid");
+		return 0;
 	}
+
+	if (!spawn->IsPlayer()) {
+		lua_interface->LogError("LUA Bind command error: spawn is not a player");
+		return 0;
+	}
+
+	if (zone_id == 0) {
+		Client* client = spawn->GetZone()->GetClientBySpawn(spawn);
+		if (!client) {
+			lua_interface->LogError("LUA Bind command error: unable to get client from spawn");
+			return 0;
+		}
+
+		if (!client->Bind())
+			client->SimpleMessage(CHANNEL_COLOR_RED, "Unable to set bind point.");
+	}
+	else {
+		Player* player = (Player*)spawn;
+		player->GetPlayerInfo()->SetBindZone(zone_id);
+		player->GetPlayerInfo()->SetBindX(x);
+		player->GetPlayerInfo()->SetBindY(y);
+		player->GetPlayerInfo()->SetBindZ(z);
+		player->GetPlayerInfo()->SetBindHeading(h);
+	}
+	
 	return 0;
 }
 
@@ -3440,14 +3589,42 @@ int EQ2Emu_lua_AddSpellBookEntry(lua_State* state) {
 	Spell* spell = master_spell_list.GetSpell(spellid, tier);
 	if (player && spell && player->IsPlayer()) {
 		Client* client = player->GetZone()->GetClientBySpawn(player);
-		if (client ) {
-			((Player*)player)->AddSpellBookEntry(spell->GetSpellID(), spell->GetSpellTier(), ((Player*)player)->GetFreeSpellBookSlot(spell->GetSpellData()->spell_book_type), spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+		if (client) {
+		if (!client->GetPlayer()->HasSpell(spellid, tier -1, true))
+		{
+			Spell* spell = master_spell_list.GetSpell(spellid, tier);
+			client->GetPlayer()->AddSpellBookEntry(spellid, 1, client->GetPlayer()->GetFreeSpellBookSlot(spell->GetSpellData()->spell_book_type), spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+		else
+		{
+			Spell* spell = master_spell_list.GetSpell(spellid, tier) ;
+			int8 old_slot = client->GetPlayer()->GetSpellSlot(spell->GetSpellID());
+			client->GetPlayer()->RemoveSpellBookEntry(spell->GetSpellID());
+			client->GetPlayer()->AddSpellBookEntry(spell->GetSpellID(), spell->GetSpellTier(), old_slot, spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
+			client->GetPlayer()->UnlockSpell(spell);
+			client->SendSpellUpdate(spell);
+		}
+
+
+
+		//if (client ) {
+		//	((Player*)player)->AddSpellBookEntry(spell->GetSpellID(), spell->GetSpellTier(), ((Player*)player)->GetFreeSpellBookSlot(spell->GetSpellData()->spell_book_type), spell->GetSpellData()->spell_book_type, spell->GetSpellData()->linked_timer, true);
 			EQ2Packet* outapp = ((Player*)player)->GetSpellBookUpdatePacket(client->GetVersion());
 			if (outapp)
 				client->QueuePacket(outapp);
 		}
 	}
 	return 0;
+
+	
+
+
+
+
+
+
 }
 
 int EQ2Emu_lua_HasFreeSlot(lua_State* state) {
@@ -8636,4 +8813,215 @@ int EQ2Emu_lua_GetClientVersion(lua_State* state) {
 
 	lua_interface->SetInt32Value(state, client->GetVersion());
 	return 1;
+}
+
+int EQ2Emu_lua_GetItemID(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Item* item = lua_interface->GetItem(state);
+	if (!item) {
+		lua_interface->LogError("LUA GetItemID command error: item is not valid");
+		return 0;
+	}
+
+	lua_interface->SetInt32Value(state, item->details.item_id);
+	return 1;
+}
+
+int EQ2Emu_lua_IsEntity(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	if (!spawn) {
+		lua_interface->LogError("LUA IsEntity command error: spawn is not valid");
+		return 0;
+	}
+
+	lua_interface->SetBooleanValue(state, spawn->IsEntity());
+	return 1;
+}
+
+int EQ2Emu_lua_GetOrigX(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetOrigX command error: spawn is not valid");
+		return 0;
+	}
+
+	lua_interface->SetFloatValue(state, spawn->GetSpawnOrigX());
+	return 1;
+}
+
+int EQ2Emu_lua_GetOrigY(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetOrigY command error: spawn is not valid");
+		return 0;
+	}
+
+	lua_interface->SetFloatValue(state, spawn->GetSpawnOrigY());
+	return 1;
+}
+
+int EQ2Emu_lua_GetOrigZ(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetOrigZ command error: spawn is not valid");
+		return 0;
+	}
+
+	lua_interface->SetFloatValue(state, spawn->GetSpawnOrigZ());
+	return 1;
+}
+
+int EQ2Emu_lua_GetPCTOfHP(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	float pct = lua_interface->GetFloatValue(state, 2);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetPCTOfHP command error: spawn is not valid");
+		return 0;
+	}
+
+	if (pct == 0) {
+		lua_interface->LogError("LUA GetPCTOfHP command error: pct is not valid");
+		return 0;
+	}
+
+	int32 amount = std::round(spawn->GetTotalHP() * (pct / 100));
+	lua_interface->SetInt32Value(state, amount);
+	return 1;
+}
+
+int EQ2Emu_lua_GetPCTOfPower(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	float pct = lua_interface->GetFloatValue(state, 2);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetPCTOfPower command error: spawn is not valid");
+		return 0;
+	}
+
+	if (pct == 0) {
+		lua_interface->LogError("LUA GetPCTOfPower command error: pct is not valid");
+		return 0;
+	}
+
+	int32 amount = std::round(spawn->GetTotalPower() * (pct / 100));
+	lua_interface->SetInt32Value(state, amount);
+	return 1;
+}
+
+int EQ2Emu_lua_GetBoundZoneID(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* spawn = lua_interface->GetSpawn(state);
+	if (!spawn) {
+		lua_interface->LogError("LUA GetBoundZoneID command error: spawn is not valid");
+		return 0;
+	}
+
+	if (!spawn->IsPlayer()) {
+		lua_interface->LogError("LUA GetBoundZoneID command error: spawn is not a player");
+		return 0;
+	}
+
+	lua_interface->SetInt32Value(state, ((Player*)spawn)->GetPlayerInfo()->GetBindZoneID());
+	return 1;
+}
+
+int EQ2Emu_lua_Evac(lua_State* state) {
+	if (!lua_interface)
+		return 0;
+
+	Spawn* target = lua_interface->GetSpawn(state);
+	
+	if (target) {
+		float x = target->GetZone()->GetSafeX();
+		float y = target->GetZone()->GetSafeY();
+		float z = target->GetZone()->GetSafeZ();
+		float h = target->GetZone()->GetSafeHeading();
+		
+		target->SetX(x);
+		target->SetY(y);
+		target->SetZ(z);
+		target->SetHeading(h);
+
+		target->SetSpawnOrigX(target->GetX());
+		target->SetSpawnOrigY(target->GetY());
+		target->SetSpawnOrigZ(target->GetZ());
+		target->SetSpawnOrigHeading(target->GetHeading());
+		
+		if (target->IsPlayer()) {
+			Client* client = target->GetZone()->GetClientBySpawn(target);
+			if (client) {
+				PacketStruct* packet = configReader.getStruct("WS_TeleportWithinZone", client->GetVersion());
+				if (packet)
+				{
+					packet->setDataByName("x", x);
+					packet->setDataByName("y", y);
+					packet->setDataByName("z", z);
+					client->QueuePacket(packet->serialize());
+					safe_delete(packet);
+				}
+			}
+		}
+	}
+	else {
+		LuaSpell* spell = lua_interface->GetCurrentSpell(state);
+		ZoneServer* zone = spell->caster->GetZone();
+		float x = spell->caster->GetZone()->GetSafeX();
+		float y = spell->caster->GetZone()->GetSafeY();
+		float z = spell->caster->GetZone()->GetSafeZ();
+		float h = spell->caster->GetZone()->GetSafeHeading();
+
+		spell->MSpellTargets.readlock(__FUNCTION__, __LINE__);
+		for (int32 i = 0; i < spell->targets.size(); i++) {
+			Spawn* target2 = zone->GetSpawnByID(spell->targets.at(i));
+			if (!target2)
+				continue;
+			
+			target2->SetX(x);
+			target2->SetY(y);
+			target2->SetZ(z);
+			target2->SetHeading(h);
+
+			target2->SetSpawnOrigX(target2->GetX());
+			target2->SetSpawnOrigY(target2->GetY());
+			target2->SetSpawnOrigZ(target2->GetZ());
+			target2->SetSpawnOrigHeading(target2->GetHeading());
+
+			if (target2->IsPlayer()) {
+				Client* client = target2->GetZone()->GetClientBySpawn(target2);
+				if (client) {
+					PacketStruct* packet = configReader.getStruct("WS_TeleportWithinZone", client->GetVersion());
+					if (packet)
+					{
+						packet->setDataByName("x", x);
+						packet->setDataByName("y", y);
+						packet->setDataByName("z", z);
+						client->QueuePacket(packet->serialize());
+						safe_delete(packet);
+					}
+				}
+			}
+		}
+		spell->MSpellTargets.releasereadlock(__FUNCTION__, __LINE__);
+	}
 }

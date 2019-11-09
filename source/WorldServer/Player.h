@@ -122,6 +122,10 @@
 #define HISTORY_TYPE_DISCOVERY	2
 #define HISTORY_TYPE_XP			3
 
+/* Spell Status */
+#define SPELL_STATUS_QUEUE		4
+#define SPELL_STATUS_LOCK		66
+
 /* Character History Sub Type Defines */
 #define HISTORY_SUBTYPE_NONE	0
 #define HISTORY_SUBTYPE_ADVENTURE	1
@@ -154,7 +158,7 @@ struct SpellBookEntry{
 	int32	type;
 	sint32	slot;
 	int32	recast_available;
-	int32	status;
+	int8	status;
 	int16	recast;
 	int32	timer;
 	bool	save_needed;
@@ -459,6 +463,7 @@ public:
 	int16 GetTaskGroupStep(int32 quest_id);
 	int8 GetSpellTier(int32 id);
 	void SetSpellStatus(Spell* spell, int8 status);
+	void RemoveSpellStatus(Spell* spell, int8 status);
 	EQ2Packet* GetSpellBookUpdatePacket(int16 version);
 	EQ2Packet* GetSpellSlotMappingPacket(int16 version);
 	int32 GetCharacterID();
@@ -577,7 +582,7 @@ public:
 	vector<Quest*>* CheckQuestsChatUpdate(Spawn* spawn);
 	vector<Quest*>* CheckQuestsItemUpdate(Item* item);
 	vector<Quest*>* CheckQuestsLocationUpdate();
-	vector<Quest*>* CheckQuestsKillUpdate(Spawn* spawn);
+	vector<Quest*>* CheckQuestsKillUpdate(Spawn* spawn,bool update = true);
 	vector<Quest*>* CheckQuestsSpellUpdate(Spell* spell);
 	void CheckQuestsCraftUpdate(Item* item, int32 qty);
 	void CheckQuestsHarvestUpdate(Item* item, int32 qty);
@@ -904,7 +909,8 @@ private:
 
 	/// <summary></summary>
 	void ModifySpellStatus(SpellBookEntry* spell, sint16 value, bool modify_recast = true, int16 recast = 0);
-
+	void AddSpellStatus(SpellBookEntry* spell, sint16 value, bool modify_recast = true, int16 recast = 0);
+	void RemoveSpellStatus(SpellBookEntry* spell, sint16 value, bool modify_recast = true, int16 recast = 0);
 	void InitXPTable();
 	map<int8, int32> m_levelXPReq;
 

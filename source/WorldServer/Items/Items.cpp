@@ -1595,7 +1595,7 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 			}
 		}
 	}
-	if (item_string_stats.size() > 0){
+	if (item_string_stats.size() > 0 && !loot_item){
 		if ((client->GetVersion() >= 63119) || client->GetVersion() == 61331) {
 			packet->setSubstructArrayLengthByName("header_info", "mod_count", item_string_stats.size());
 			for (int32 i = 0; i < item_string_stats.size(); i++){
@@ -1885,17 +1885,19 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 					if(spell){
 						if(player) {
 							packet->setSubstructDataByName("header_info", "footer_type", 0);
-							packet->setDataByName("unknown2", 1);// teset 63119
+							
 							spell->SetPacketInformation(packet, player->GetZone()->GetClientBySpawn(player));
 							if (player->HasSpell(skill_info->spell_id, skill_info->spell_tier))
 								packet->setDataByName("scribed", 1);
 							else
 								if (packet->GetVersion() >= 927){
 									if (player->HasSpell(skill_info->spell_id, skill_info->spell_tier, true))
-										packet->setAddToPacketByName("better_version", 1);
+										packet->setAddToPacketByName("better_version", 1);// need to confirm
 								}
 								else
 									packet->setAddToPacketByName("better_version", 0); //if not scribed
+							packet->setDataByName("require_previous", 0);
+							
 						}
 						else {
 							
@@ -1998,8 +2000,12 @@ void Item::serialize(PacketStruct* packet, bool show_name, Player* player, int16
 	}
 
 	LogWrite(MISC__TODO, 1, "TODO", "Item Set information\n\t(%s, function: %s, line #: %i)", __FILE__, __FUNCTION__, __LINE__);
-	
-	packet->setSubstructDataByName("footer", "stack_size", stack_count);
+	if (IsBauble()) {
+		packet->setSubstructDataByName("footer", "stack_size", stack_count);
+	}
+	else {
+		packet->setSubstructDataByName("footer", "stack_size", stack_count);
+	}
 	packet->setSubstructDataByName("footer", "collectable", generic_info.collectable);
 	
 	

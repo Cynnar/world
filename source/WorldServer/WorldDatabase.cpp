@@ -906,6 +906,11 @@ void WorldDatabase::LoadNPCs(ZoneServer* zone){
 		npc->appearance.level =		atoi(row[2]);
 		npc->appearance.encounter_level = atoi(row[4]);
 		npc->appearance.race = atoi(row[5]);
+		//npc->appearance.lua_race_id = atoi(row[75]);
+		if (atoi(row[74]) > 0) {
+			int16 xxx = atoi(row[75]);
+			int8 yyy = 0;
+		}
 		npc->appearance.model_type = atoi(row[6]);
 		npc->appearance.soga_model_type = atoi(row[62]);
 		npc->appearance.adventure_class = atoi(row[7]);
@@ -3655,7 +3660,7 @@ void WorldDatabase::LoadSpawnScriptData() {
 			}
 			else {
 				if(row[3])
-					LogWrite(LUA__ERROR, 0, "LUA", "Invalid Entry in spawn_scripts table for lua_script '%s'", row[3]);
+					LogWrite(LUA__ERROR, 0, "LUA", "Invalid Entry in spawn_scripts table for lua_script '%s' (spawn_id, spawnentry_id and spawn_location_id are all 0)", row[3]);
 				else
 					LogWrite(LUA__ERROR, 0, "LUA", "Invalid Entry in spawn_scripts table.");
 			}
@@ -4051,7 +4056,7 @@ void WorldDatabase::LoadSpells()
 	int32 total = 0;
 	map<int32, vector<LevelArray*> >* level_data = LoadSpellClasses();
 
-	if( !database_new.Select(&result, "SELECT s.`id`, ts.spell_id, ts.index, `name`, `description`, `type`, `class_skill`, `mastery_skill`, `tier`, `is_aa`,`hp_req`, `power_req`, `cast_time`, `recast`, `radius`, `max_aoe_targets`, `req_concentration`, `range`, `duration1`, `duration2`, `resistibility`, `hp_upkeep`, `power_upkeep`, `duration_until_cancel`, `target_type`, `recovery`, `power_req_percent`, `hp_req_percent`, `icon`, `icon_heroic_op`, `icon_backdrop`, `success_message`, `fade_message`, `cast_type`, `lua_script`, `call_frequency`, `interruptable`, `spell_visual`, `effect_message`, `min_range`, `can_effect_raid`, `affect_only_group_members`, `hit_bonus`, `display_spell_tier`, `friendly_spell`, `group_spell`, `spell_book_type`, spell_type+0, s.is_active, savagery_req, savagery_req_percent, savagery_upkeep, dissonance_req, dissonance_req_percent, dissonance_upkeep, linked_timer_id, det_type, incurable, control_effect_type, cast_while_moving, casting_flags, persist_through_death, not_maintained, savage_bar, savage_bar_slot, soe_spell_crc "
+	if( !database_new.Select(&result, "SELECT s.`id`, ts.spell_id, ts.index, `name`, `description`, `type`, `class_skill`, `mastery_skill`, `tier`, `is_aa`,`hp_req`, `power_req`,`power_by_level`, `cast_time`, `recast`, `radius`, `max_aoe_targets`, `req_concentration`, `range`, `duration1`, `duration2`, `resistibility`, `hp_upkeep`, `power_upkeep`, `duration_until_cancel`, `target_type`, `recovery`, `power_req_percent`, `hp_req_percent`, `icon`, `icon_heroic_op`, `icon_backdrop`, `success_message`, `fade_message`, `cast_type`, `lua_script`, `call_frequency`, `interruptable`, `spell_visual`, `effect_message`, `min_range`, `can_effect_raid`, `affect_only_group_members`, `hit_bonus`, `display_spell_tier`, `friendly_spell`, `group_spell`, `spell_book_type`, spell_type+0, s.is_active, savagery_req, savagery_req_percent, savagery_upkeep, dissonance_req, dissonance_req_percent, dissonance_upkeep, linked_timer_id, det_type, incurable, control_effect_type, cast_while_moving, casting_flags, persist_through_death, not_maintained, savage_bar, savage_bar_slot, soe_spell_crc "
 									"FROM (spells s, spell_tiers st) "
 									"LEFT JOIN spell_ts_ability_index ts "
 									"ON s.`id` = ts.spell_id "
@@ -4118,7 +4123,13 @@ void WorldDatabase::LoadSpells()
 			data->hp_req					= result.GetInt16Str("hp_req");
 			data->hp_upkeep					= result.GetInt16Str("hp_upkeep");
 			data->hp_req_percent			= result.GetInt8Str("hp_req_percent");
-			data->power_req					= result.GetInt16Str("power_req");
+			data->power_req					= result.GetFloatStr("power_req");
+
+
+			
+
+
+			data->power_by_level			= ( result.GetInt8Str("power_by_level") == 0)? false : true;
 			data->power_upkeep				= result.GetInt16Str("power_upkeep");
 			data->power_req_percent			= result.GetInt8Str("power_req_percent");
 			data->savagery_req				= result.GetInt16Str("savagery_req");
@@ -5960,10 +5971,10 @@ void WorldDatabase::LoadGroundSpawnEntry(ZoneServer* zone, int32 entry_id) {
 }
 
 bool WorldDatabase::LoadNPC(ZoneServer* zone, int32 spawn_id) {
-	NPC* npc = 0;
+	NPC* npc = nullptr;
 	int32 id = 0;
 	DatabaseResult result;
-
+										
 	database_new.Select(&result, "SELECT npc.spawn_id, s.name, npc.min_level, npc.max_level, npc.enc_level, s.race, s.model_type, npc.class_, npc.gender, s.command_primary, s.command_secondary, s.show_name, npc.min_group_size, npc.max_group_size, npc.hair_type_id, npc.facial_hair_type_id, npc.wing_type_id, npc.chest_type_id, npc.legs_type_id, npc.soga_hair_type_id, npc.soga_facial_hair_type_id, s.attackable, s.show_level, s.targetable, s.show_command_icon, s.display_hand_icon, s.hp, s.power, s.size, s.collision_radius, npc.action_state, s.visual_state, npc.mood_state, npc.initial_state, npc.activity_status, s.faction_id, s.sub_title, s.merchant_id, s.merchant_type, s.size_offset, npc.attack_type, npc.ai_strategy+0, npc.spell_list_id, npc.secondary_spell_list_id, npc.skill_list_id, npc.secondary_skill_list_id, npc.equipment_list_id, npc.str, npc.sta, npc.wis, npc.intel, npc.agi, npc.heat, npc.cold, npc.magic, npc.mental, npc.divine, npc.disease, npc.poison, npc.aggro_radius, npc.cast_percentage, npc.randomize, npc.soga_model_type, npc.heroic_flag, npc.alignment, npc.elemental, npc.arcane, npc.noxious, s.savagery, s.dissonance, npc.hide_hood, npc.emote_state, s.prefix, s.suffix, s.last_name\n"
 								 "FROM spawn s\n"
 								 "INNER JOIN spawn_npcs npc\n"
@@ -5991,6 +6002,8 @@ bool WorldDatabase::LoadNPC(ZoneServer* zone, int32 spawn_id) {
 		npc->appearance.level =		result.GetInt8(2);
 		npc->appearance.encounter_level = result.GetInt8(4);
 		npc->appearance.race = result.GetInt8(5);
+		 
+		//npc->appearance.lua_race_id = result.GetInt16(74);
 		npc->appearance.model_type = result.GetInt16(6);
 		npc->appearance.soga_model_type = result.GetInt16(62);
 		npc->appearance.adventure_class = result.GetInt8(7);

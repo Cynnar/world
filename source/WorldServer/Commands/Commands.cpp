@@ -4893,11 +4893,16 @@ void Commands::Command_Inventory(Client* client, Seperator* sep, EQ2_RemoteComma
 			{
 				if(item->GetItemScript() && lua_interface)
 					lua_interface->RunItemScript(item->GetItemScript(), "destroyed", item, client->GetPlayer());
-
+				int32 bag_id = item->details.inv_slot_id;
 				database.DeleteItem(client->GetCharacterID(), item, 0);
 				client->GetPlayer()->item_list.DestroyItem(index);
 				EQ2Packet* outapp = client->GetPlayer()->SendInventoryUpdate(client->GetVersion());
 				client->QueuePacket(outapp);
+
+				outapp = client->GetPlayer()->SendBagUpdate(bag_id, client->GetVersion());
+
+				if (outapp)
+					client->QueuePacket(outapp);
 			}
 		}
 		else if(sep->arg[4][0] && strncasecmp("move", sep->arg[0], 4) == 0 && sep->IsNumber(1) && sep->IsNumber(2) && sep->IsNumber(3) && sep->IsNumber(4))
@@ -5910,9 +5915,9 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 
 			if (quest_id > 0)
 			{
-				if (lua_interface && client->GetPlayer()->player_quests.count(quest_id) > 0)
+				if (lua_interface && client->GetPlayer()->completed_quests.count(quest_id) > 0)
 				{
-					Quest* quest = client->GetPlayer()->player_quests[quest_id];
+					Quest* quest = client->GetPlayer()->completed_quests[quest_id];
 					if (quest)
 						if (client->GetPlayer() == player)
 						{
@@ -6828,7 +6833,7 @@ void Commands::Command_SpawnTemplate(Client* client, Seperator* sep)
 {
 	if (sep == NULL || sep->arg[0] == NULL) 
 	{
-		client->Message(CHANNEL_COLOR_YELLOW, "Examples:\n/spawn template save Test - saves a template of the targetted spawn as the name Test\n/spawn template list - shows a list of current templates\n/spawn template create [id|name] creates a new spawn based on template [id|name] at your current location.");
+		client->Message(CHANNEL_COLOR_YELLOW, "Examples:\n/spawn template save Test - saves a template of the targetted spawn as the name Test\n/spawn template list - shows a list of current templates\n/spawn template spawn [id|name] creates a new spawn based on template [id|name] at your current location.");
 		return;
 	} 
 
@@ -6914,7 +6919,8 @@ void Commands::Command_SpawnTemplate(Client* client, Seperator* sep)
 			client->Message(CHANNEL_COLOR_RED, "ERROR: Removing a spawn template requires a valid template ID!");
 	}
 
-	else if (strncasecmp(template_cmd, "create", strlen(template_cmd)) == 0) 
+	// Renamed create to spawn
+	else if (strncasecmp(template_cmd, "spawn", strlen(template_cmd)) == 0) 
 	{
 		if (sep && sep->arg[1][0]) 
 		{
@@ -6929,7 +6935,7 @@ void Commands::Command_SpawnTemplate(Client* client, Seperator* sep)
 				if( new_location > 0 )
 					client->Message(CHANNEL_COLOR_YELLOW, "New spawn location %u created from template ID: %u", new_location, template_id);
 				else
-					client->Message(CHANNEL_COLOR_RED, "ERROR: Failed to create new spawn location from template ID: %u", template_id);
+					client->Message(CHANNEL_COLOR_RED, "ERROR: Failed to spawn the new spawn location from template ID: %u", template_id);
 			}
 			else
 			{
@@ -6940,11 +6946,11 @@ void Commands::Command_SpawnTemplate(Client* client, Seperator* sep)
 				if( new_location > 0 )
 					client->Message(CHANNEL_COLOR_YELLOW, "New spawn location %u created from template: '%s'", new_location, name);
 				else
-					client->Message(CHANNEL_COLOR_RED, "ERROR: Failed to create new spawn location from template: '%s'", name);
+					client->Message(CHANNEL_COLOR_RED, "ERROR: Failed to spawn the new spawn location from template: '%s'", name);
 			}
 		}
 		else
-			client->Message(CHANNEL_COLOR_RED, "ERROR: Creating a new spawn location requires a valid template name or ID!");
+			client->Message(CHANNEL_COLOR_RED, "ERROR: Spawning a new spawn location requires a valid template name or ID!");
 	}
 
 	else

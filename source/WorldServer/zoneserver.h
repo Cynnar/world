@@ -160,7 +160,7 @@ struct GroundSpawnEntry;
 struct GroundSpawnEntryItem;
 struct LootTable;
 struct LootDrop;
-struct ZoneLoot;
+struct GlobalLoot;
 struct TransportDestination;
 struct LocationTransportDestination;
 
@@ -857,9 +857,9 @@ private:
 	map<int32,LootTable*> loot_tables;
 	map<int32, vector<LootDrop*> > loot_drops;
 	map<int32, vector<int32> > spawn_loot_list;
-	map<int8, vector<int32> > level_loot_list;
-	map<int16, vector<int32> > racial_loot_list;
-	map<int32, vector<ZoneLoot*> > zone_loot_list;
+	vector<GlobalLoot*> level_loot_list;
+	map<int16, vector<GlobalLoot*> > racial_loot_list;
+	map<int32, vector<GlobalLoot*> > zone_loot_list;
 	map<int32, vector<TransportDestination*> > transporters;
 	map<int32, MutexList<LocationTransportDestination*>* > location_transporters;
 	Mutex MTransporters;
@@ -961,9 +961,9 @@ public:
 	void				AddLootTable(int32 id, LootTable* table);
 	void				AddLootDrop(int32 id, LootDrop* drop);
 	void				AddSpawnLootList(int32 spawn_id, int32 id);
-	void				AddLevelLootList(int8 level, int32 id);
-	void				AddRacialLootList(int16 racial_id, int32 id);
-	void				AddZoneLootList(int32 zone, ZoneLoot* loot);
+	void				AddLevelLootList(GlobalLoot* loot);
+	void				AddRacialLootList(int16 racial_id, GlobalLoot* loot);
+	void				AddZoneLootList(int32 zone, GlobalLoot* loot);
 	void				ClearLootTables();
 	vector<int32>		GetSpawnLootList(int32 spawn_id, int32 zone_id, int8 spawn_level, int16 racial_id);
 	vector<LootDrop*>*	GetLootDrops(int32 table_id);

@@ -892,7 +892,7 @@ bool Entity::CheckSpellBonusRemoval(LuaSpell* spell, int16 type){
 	return false;
 }
 
-void Entity::AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req){
+void Entity::AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class_req, vector<int16> race_req, vector<int16> faction_req){
 	CheckSpellBonusRemoval(spell, type); 
 	BonusValues* bonus = new BonusValues;
 	bonus->spell_id = spell->spell->GetSpellID();
@@ -900,8 +900,11 @@ void Entity::AddSpellBonus(LuaSpell* spell, int16 type, float value, int64 class
 	bonus->type = type;
 	bonus->value = value;
 	bonus->class_req = class_req;
+	bonus->race_req = race_req;
+	bonus->faction_req = faction_req;
 	bonus->tier = spell ? spell->spell->GetSpellTier() : 0;
 	bonus_list.Add(bonus);
+
 }
 
 BonusValues* Entity::GetSpellBonus(int32 spell_id) {
@@ -927,7 +930,7 @@ vector<BonusValues*>* Entity::GetAllSpellBonuses(LuaSpell* spell) {
 	return list;
 }
 
-void Entity::RemoveSpellBonus(LuaSpell* spell){
+void Entity::RemoveSpellBonus(const LuaSpell* spell){
 	MutexList<BonusValues*>::iterator itr = bonus_list.begin();
 	while(itr.Next()){
 		if(itr.value->luaspell == spell)
@@ -940,15 +943,25 @@ void Entity::CalculateSpellBonuses(ItemStatsValues* stats){
 		MutexList<BonusValues*>::iterator itr = bonus_list.begin();
 		vector<BonusValues*> bv;
 		//First check if we meet the requirement for each bonus
+		bool race_match = false;
 		while(itr.Next()) {
-			int64 class1 = pow(2.0, (GetAdventureClass() - 1));
-			int64 class2 = pow(2.0, (classes.GetSecondaryBaseClass(GetAdventureClass()) - 1));
-			int64 class3 = pow(2.0, (classes.GetBaseClass(GetAdventureClass()) - 1));
-			if (itr.value->class_req == 0 || (itr.value->class_req & class1) == class1 || (itr.value->class_req & class2) == class2 || (itr.value->class_req & class3) == class3)
+			if (itr.value->race_req.size() > 0) {
+				for (int8 i; i < itr.value->race_req.size(); i++) {
+					if (GetRace() == itr.value->race_req[i]) {
+						race_match = true;
+					}
+				}
+			}
+			else
+				race_match = true; // if the race_req.size = 0 then there is no race requirement and the race_match will be true
+			int64 const class1 = pow(2.0, (GetAdventureClass() - 1));
+			int64 const class2 = pow(2.0, (classes.GetSecondaryBaseClass(GetAdventureClass()) - 1));
+			int64 const class3 = pow(2.0, (classes.GetBaseClass(GetAdventureClass()) - 1));
+			if (itr.value->class_req == 0 || (itr.value->class_req & class1) == class1 || (itr.value->class_req & class2) == class2 || (itr.value->class_req & class3) == class3 && race_match )
 				bv.push_back(itr.value);
 		}
 		//Sort the bonuses by spell id and luaspell
-		BonusValues* bonus;
+		BonusValues* bonus = nullptr;
 		map <int32, map<LuaSpell*, vector<BonusValues*> > > sort;
 		for (int8 i = 0; i < bv.size(); i++){
 			bonus = bv.at(i);
@@ -958,12 +971,12 @@ void Entity::CalculateSpellBonuses(ItemStatsValues* stats){
 		map<LuaSpell*, vector<BonusValues*> >::iterator tier_itr;
 		map <int32, map<LuaSpell*, vector<BonusValues*> > >::iterator sort_itr;
 		for (sort_itr = sort.begin(); sort_itr != sort.end(); sort_itr++){
-			LuaSpell* key;
+			LuaSpell* key = nullptr;
 			sint8 highest_tier = -1;
 			//Find the highest tier for this spell id
 			for (tier_itr = sort_itr->second.begin(); tier_itr != sort_itr->second.end(); tier_itr++){
 				LuaSpell* current_spell = tier_itr->first;
-				sint8 current_tier;
+				sint8 current_tier = 0;
 				if (current_spell && ((current_tier = current_spell->spell->GetSpellTier()) > highest_tier)) {
 					highest_tier = current_tier;
 					key = current_spell;

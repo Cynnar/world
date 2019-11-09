@@ -1309,9 +1309,16 @@ bool SpellProcess::CastProcessedSpell(LuaSpell* spell, bool passive){
 	}
 	if(!spell->resisted && (spell->spell->GetSpellDuration() > 0 || spell->spell->GetSpellData()->duration_until_cancel)) {
 		for (int32 i = 0; i < spell->targets.size(); i++) {
+			
+			//LogWrite(SPELL__ERROR, 0, "Spell", "No precast function found for %s", ((Entity*)target)->GetName());
 			target = zone->GetSpawnByID(spell->targets.at(i));
-			if (i == 0 && !spell->spell->GetSpellData()->not_maintained)
+			
+			if (i == 0 && !spell->spell->GetSpellData()->not_maintained) {
 				spell->caster->AddMaintainedSpell(spell);
+				//((Entity*)target)->AddMaintainedSpell(spell);
+				LogWrite(SPELL__ERROR, 0, "AddMaintained", "%s", ((Entity*)target)->GetName());
+			}
+			
 			SpellEffects* effect = ((Entity*)target)->GetSpellEffect(spell->spell->GetSpellID());
 			if (effect && effect->tier > spell->spell->GetSpellTier()) {
 				if(client) {
@@ -1567,7 +1574,7 @@ void SpellProcess::GetSpellTargets(LuaSpell* luaspell)
 		Spawn* target = caster->GetZone()->GetSpawnByID(luaspell->initial_target);
 		SpellData* data = luaspell->spell->GetSpellData();
 		bool implied = false;
-		Spawn* secondary_target = 0;
+		Spawn* secondary_target = nullptr;
 		
 		//implied target check -- only use this for players
 		if (target && (target_type == SPELL_TARGET_ENEMY || target_type == SPELL_TARGET_ENEMY_CORPSE || target_type == SPELL_TARGET_GROUP_CORPSE || target_type == SPELL_TARGET_OTHER_GROUP_AE))

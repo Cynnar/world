@@ -61,7 +61,7 @@ struct Location {
 
 class QuestStep{
 public:
-	QuestStep(int32 in_id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage);
+	QuestStep(int32 in_id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group, vector<Location>* in_locations, float in_max_variation, float in_percentage, int32 in_usableitemid);
 	QuestStep(QuestStep* old_step);
 	~QuestStep();
 	bool			CheckStepKillUpdate(int32 id);
@@ -89,6 +89,7 @@ public:
 	const char*		GetUpdateName();
 	void			SetUpdateName(const char* name);
 	int32			GetStepID();
+	int32			GetItemID();
 	bool			WasUpdated();
 	void			WasUpdated(bool val);
 	float			GetPercentage();
@@ -109,6 +110,7 @@ private:
 	vector<Location>*	locations;
 	float				max_variation;
 	float				percentage;
+	int32				usableitemid;
 	int32				step_progress;
 };
 class Player;
@@ -147,14 +149,14 @@ public:
 	void                SetRewardTSXP(int32 xp) { reward_tsexp = xp; }
 
 	bool				AddQuestStep(QuestStep* step);
-	QuestStep*			AddQuestStep(int32 id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group = 0, vector<Location>* in_locations = 0, float in_max_variation = 0, float in_percentage = 0);
+	QuestStep*			AddQuestStep(int32 id, int8 in_type, string in_description, vector<int32>* in_ids, int32 in_quantity, const char* in_task_group = 0, vector<Location>* in_locations = 0, float in_max_variation = 0, float in_percentage = 0,int32 in_usableitemid = 0);
 	bool				SetStepComplete(int32 step);
 	bool				AddStepProgress(int32 step_id, int32 progress);
 	int16				GetQuestStep();
 	int32				GetStepProgress(int32 step_id);
 	int16				GetTaskGroupStep();
 	bool				QuestStepIsActive(int16 quest_step_id);
-	bool				CheckQuestKillUpdate(Spawn* spawn);
+	bool				CheckQuestKillUpdate(Spawn* spawn, bool update = true);
 	bool				CheckQuestChatUpdate(int32 id, bool update = true);
 	bool				CheckQuestItemUpdate(int32 id, int8 quantity = 1);
 	bool				CheckQuestLocationUpdate(float char_x, float char_y, float char_z);

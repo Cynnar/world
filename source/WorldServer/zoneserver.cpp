@@ -6571,15 +6571,15 @@ void ZoneServer::AddSpawnLootList(int32 spawn_id, int32 id){
 	spawn_loot_list[spawn_id].push_back(id);
 }
 
-void ZoneServer::AddLevelLootList(int8 level, int32 id) {
-	level_loot_list[level].push_back(id);
+void ZoneServer::AddLevelLootList(GlobalLoot* loot) {
+	level_loot_list.push_back(loot);
 }
 
-void ZoneServer::AddRacialLootList(int16 racial_id, int32 id) {
-	racial_loot_list[racial_id].push_back(id);
+void ZoneServer::AddRacialLootList(int16 racial_id, GlobalLoot* loot) {
+	racial_loot_list[racial_id].push_back(loot);
 }
 
-void ZoneServer::AddZoneLootList(int32 zone, ZoneLoot* loot) {
+void ZoneServer::AddZoneLootList(int32 zone, GlobalLoot* loot) {
 	zone_loot_list[zone].push_back(loot);
 }
 
@@ -6597,8 +6597,22 @@ void ZoneServer::ClearLootTables(){
 		}
 	}
 
-	map<int32, vector<ZoneLoot*> >::iterator zone_itr;
-	vector<ZoneLoot*>::iterator zone_itr2;
+	vector<GlobalLoot*>::iterator level_itr;
+	for (level_itr = level_loot_list.begin(); level_itr != level_loot_list.end(); level_itr++) {
+		safe_delete(*level_itr);
+	}
+
+
+	map<int16, vector<GlobalLoot*> >::iterator race_itr;
+	vector<GlobalLoot*>::iterator race_itr2;
+	for (race_itr = racial_loot_list.begin(); race_itr != racial_loot_list.end(); race_itr++) {
+		for (race_itr2 = race_itr->second.begin(); race_itr2 != race_itr->second.end(); race_itr2++) {
+			safe_delete(*race_itr2);
+		}
+	}
+
+	map<int32, vector<GlobalLoot*> >::iterator zone_itr;
+	vector<GlobalLoot*>::iterator zone_itr2;
 	for(zone_itr = zone_loot_list.begin(); zone_itr != zone_loot_list.end(); zone_itr++) {
 		for (zone_itr2 = zone_itr->second.begin(); zone_itr2 != zone_itr->second.end(); zone_itr2++) {
 			safe_delete(*zone_itr2);
@@ -6621,16 +6635,36 @@ vector<int32> ZoneServer::GetSpawnLootList(int32 spawn_id, int32 zone_id, int8 s
 	if (spawn_loot_list.count(spawn_id) > 0)
 		ret.insert(ret.end(), spawn_loot_list[spawn_id].begin(), spawn_loot_list[spawn_id].end());
 
-	if (level_loot_list.count(spawn_level) > 0)
-		ret.insert(ret.end(), level_loot_list[spawn_level].begin(), level_loot_list[spawn_level].end());
+	if (level_loot_list.size() > 0) {
+		vector<GlobalLoot*>::iterator itr;
+		for (itr = level_loot_list.begin(); itr != level_loot_list.end(); itr++) {
+			GlobalLoot* loot = *itr;
+			if (loot->minLevel == 0 && loot->maxLevel == 0)
+				ret.push_back(loot->table_id);
+			else {
+				if (spawn_level >= loot->minLevel && spawn_level <= loot->maxLevel)
+					ret.push_back(loot->table_id);
+			}
+		}
+	}
 
-	if (racial_loot_list.count(racial_id) > 0)
-		ret.insert(ret.end(), racial_loot_list[racial_id].begin(), racial_loot_list[racial_id].end());
+	if (racial_loot_list.count(racial_id) > 0) {
+		vector<GlobalLoot*>::iterator itr;
+		for (itr = racial_loot_list[racial_id].begin(); itr != racial_loot_list[racial_id].end(); itr++) {
+			GlobalLoot* loot = *itr;
+			if (loot->minLevel == 0 && loot->maxLevel == 0)
+				ret.push_back(loot->table_id);
+			else {
+				if (spawn_level >= loot->minLevel && spawn_level <= loot->maxLevel)
+					ret.push_back(loot->table_id);
+			}
+		}
+	}
 
 	if (zone_loot_list.count(zone_id) > 0) {
-		vector<ZoneLoot*>::iterator itr;
+		vector<GlobalLoot*>::iterator itr;
 		for (itr = zone_loot_list[zone_id].begin(); itr != zone_loot_list[zone_id].end(); itr++) {
-			ZoneLoot* loot = *itr;
+			GlobalLoot* loot = *itr;
 			if (loot->minLevel == 0 && loot->maxLevel == 0)
 				ret.push_back(loot->table_id);
 			else {

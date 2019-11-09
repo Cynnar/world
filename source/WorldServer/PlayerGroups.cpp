@@ -535,22 +535,22 @@ void PlayerGroupManager::UpdateGroupBuffs() {
 	deque<GroupMemberInfo*>::iterator member_itr;
 	deque<GroupMemberInfo*>::iterator target_itr;
 	map<int32, SkillBonusValue*>::iterator itr_skills;
-	MaintainedEffects* me = 0;
-	LuaSpell* luaspell = 0;
-	Spell* spell = 0;
-	Entity* group_member = 0;
-	SkillBonus* sb;
-	EQ2Packet* packet;
+	MaintainedEffects* me = nullptr;
+	LuaSpell* luaspell = nullptr;
+	Spell* spell = nullptr;
+	Entity* group_member = nullptr;
+	SkillBonus* sb = nullptr;
+	EQ2Packet* packet = nullptr;
 	int32 i = 0;
-	PlayerGroup* group = 0;
-	Player* caster = 0;
+	PlayerGroup* group = nullptr;
+	Player* caster = nullptr;
 	vector<int32> new_target_list;
-	Client* client = 0;
+	Client* client = nullptr;
 	bool has_effect = false;
-	vector<BonusValues*>* sb_list = 0;
-	BonusValues* bv = 0;
-	Entity* pet = 0;
-	Entity* charmed_pet = 0;
+	vector<BonusValues*>* sb_list = nullptr;
+	BonusValues* bv = nullptr;
+	Entity* pet = nullptr;
+	Entity* charmed_pet = nullptr;
 
 
 
@@ -663,11 +663,11 @@ void PlayerGroupManager::UpdateGroupBuffs() {
 						sb_list = caster->GetAllSpellBonuses(luaspell);
 						for (int32 x = 0; x < sb_list->size(); x++){
 							bv = sb_list->at(x);
-							group_member->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req);
+							group_member->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req, bv->race_req, bv->faction_req);
 							if (pet)
-								pet->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req);
+								pet->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req, bv->race_req, bv->faction_req);
 							if (charmed_pet)
-								charmed_pet->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req);
+								charmed_pet->AddSpellBonus(luaspell, bv->type, bv->value, bv->class_req, bv->race_req, bv->faction_req);
 						}
 
 						sb_list->clear();

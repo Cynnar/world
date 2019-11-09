@@ -163,7 +163,7 @@ void PlayerSkillList::SetSkillCapsByType(int8 type, int16 value){
 	}
 }
 
-void PlayerSkillList::IncreaseSkillCapsByType(int8 type, sint8 value){
+void PlayerSkillList::IncreaseSkillCapsByType(int8 type, int16 value){
 	map<int32, Skill*>::iterator itr;
 	for(itr = skills.begin(); itr != skills.end(); itr++){
 		if(itr->second && itr->second->skill_type == type)
@@ -171,7 +171,7 @@ void PlayerSkillList::IncreaseSkillCapsByType(int8 type, sint8 value){
 	}
 }
 
-void PlayerSkillList::IncreaseAllSkillCaps(sint8 value){
+void PlayerSkillList::IncreaseAllSkillCaps(int16 value){
 	map<int32, Skill*>::iterator itr;
 	for(itr = skills.begin(); itr != skills.end(); itr++){
 		IncreaseSkillCap(itr->second, value);
@@ -189,7 +189,7 @@ Skill* PlayerSkillList::GetSkill(int32 skill_id){
 		return 0;
 }
 
-void PlayerSkillList::IncreaseSkill(Skill* skill, int8 amount){
+void PlayerSkillList::IncreaseSkill(Skill* skill, int16 amount){
 	if(skill){
 		AddSkillUpdateNeeded(skill);
 		skill->previous_val = skill->current_val;
@@ -200,11 +200,11 @@ void PlayerSkillList::IncreaseSkill(Skill* skill, int8 amount){
 	}
 }
 
-void PlayerSkillList::IncreaseSkill(int32 skill_id, int8 amount){
+void PlayerSkillList::IncreaseSkill(int32 skill_id, int16 amount){
 	IncreaseSkill(GetSkill(skill_id), amount);
 }
 
-void PlayerSkillList::DecreaseSkill(Skill* skill, int8 amount){
+void PlayerSkillList::DecreaseSkill(Skill* skill, int16 amount){
 	if(skill){
 		skill->previous_val = skill->current_val;
 		if((skill->current_val - amount) < 0)
@@ -216,7 +216,7 @@ void PlayerSkillList::DecreaseSkill(Skill* skill, int8 amount){
 	}
 }
 
-void PlayerSkillList::DecreaseSkill(int32 skill_id, int8 amount){
+void PlayerSkillList::DecreaseSkill(int32 skill_id, int16 amount){
 	DecreaseSkill(GetSkill(skill_id), amount);
 }
 
@@ -235,18 +235,18 @@ void PlayerSkillList::SetSkill(int32 skill_id, int16 value){
 	SetSkill(GetSkill(skill_id), value);
 }
 
-void PlayerSkillList::IncreaseSkillCap(Skill* skill, sint8 amount){
+void PlayerSkillList::IncreaseSkillCap(Skill* skill, int16 amount){
 	if(skill){
 		skill->max_val += amount;
 		skill->save_needed = true;
 	}
 }
 
-void PlayerSkillList::IncreaseSkillCap(int32 skill_id, int8 amount){
+void PlayerSkillList::IncreaseSkillCap(int32 skill_id, int16 amount){
 	IncreaseSkillCap(GetSkill(skill_id), amount);
 }
 
-void PlayerSkillList::DecreaseSkillCap(Skill* skill, int8 amount){
+void PlayerSkillList::DecreaseSkillCap(Skill* skill, int16 amount){
 	if(skill){
 		if((skill->max_val - amount) < 0)
 			skill->max_val = 0;
@@ -261,7 +261,7 @@ void PlayerSkillList::DecreaseSkillCap(Skill* skill, int8 amount){
 	}
 }
 
-void PlayerSkillList::DecreaseSkillCap(int32 skill_id, int8 amount){
+void PlayerSkillList::DecreaseSkillCap(int32 skill_id, int16 amount){
 	DecreaseSkillCap(GetSkill(skill_id), amount);
 }
 
@@ -344,9 +344,9 @@ EQ2Packet* PlayerSkillList::GetSkillPacket(int16 version){
 			skill = itr->second;
 			if(skill){
 
-				sint16 skill_max_with_bonuses = CalculateSkillMaxValue(skill->skill_id, skill->max_val);
-				sint16 skill_with_bonuses = int(CalculateSkillValue(skill->skill_id, skill->current_val));
-				if (skill_with_bonuses > 10) {
+				int16 skill_max_with_bonuses = CalculateSkillMaxValue(skill->skill_id, skill->max_val);
+				int16 skill_with_bonuses = int(CalculateSkillValue(skill->skill_id, skill->current_val));
+				if (skill->skill_id == 613995491) {
 					int x_current = skill->current_val;
 					int x_previous = skill->previous_val;
 					int x_max = skill->max_val;

@@ -769,8 +769,8 @@ EQ2Packet* PlayerInfo::serialize(int16 version){
 		packet->setDataByName("base_spell_crit", 84);// dov confirmed
 		packet->setDataByName("base_taunt_crit", 83);// dov confirmed
 		packet->setDataByName("base_heal_crit", 82);// dov confirmed
-		packet->setDataByName("flags", 334499905);// info_struct->flags);
-		packet->setDataByName("flags2", 104);// info_struct->flags2);
+		packet->setDataByName("flags",  info_struct->flags);
+		packet->setDataByName("flags2",  info_struct->flags2);
 		//unknown_1096_20_MJ
 		//unknown_1096_21_MJ
 		//unknown_1096_22_MJ
@@ -1984,7 +1984,7 @@ void Player::AddSpellBookEntry(int32 spell_id, int8 tier, sint32 slot, int32 typ
 	MSpellsBook.lock();
 	spells.push_back(spell);
 	MSpellsBook.unlock();
-
+	
 	if (type == SPELL_BOOK_TYPE_NOT_SHOWN)
 		AddPassiveSpell(spell_id, tier);
 }
@@ -2078,7 +2078,7 @@ void Player::LockAllSpells() {
 	MSpellsBook.writelock(__FUNCTION__, __LINE__);
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		if ((*itr)->type != SPELL_BOOK_TYPE_TRADESKILL)
-			ModifySpellStatus((*itr), -66, false);
+			AddSpellStatus((*itr), SPELL_STATUS_LOCK, false);
 	}
 
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
@@ -2090,7 +2090,7 @@ void Player::UnlockAllSpells(bool modify_recast) {
 	MSpellsBook.writelock(__FUNCTION__, __LINE__);
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		if ((*itr)->type != SPELL_BOOK_TYPE_TRADESKILL)
-			ModifySpellStatus((*itr), 66, modify_recast);
+			AddSpellStatus((*itr), SPELL_STATUS_LOCK, modify_recast);
 	}
 
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
@@ -2103,7 +2103,7 @@ void Player::LockSpell(Spell* spell, int16 recast) {
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		spell2 = *itr;
 		if (spell2->spell_id == spell->GetSpellID() /*|| (spell->GetSpellData()->linked_timer > 0 && spell->GetSpellData()->linked_timer == spell2->timer)*/)
-			ModifySpellStatus(spell2, -66, true, recast);
+			RemoveSpellStatus(spell2, SPELL_STATUS_LOCK, true, recast);
 	}
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
 }
@@ -2115,7 +2115,7 @@ void Player::UnlockSpell(Spell* spell) {
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		spell2 = *itr;
 		if (spell2->spell_id == spell->GetSpellID() /*|| (spell->GetSpellData()->linked_timer > 0 && spell->GetSpellData()->linked_timer == spell2->timer)*/)
-			ModifySpellStatus(spell2, 66);
+			AddSpellStatus(spell2, SPELL_STATUS_LOCK);
 	}
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
 }
@@ -2126,7 +2126,7 @@ void Player::LockTSSpells() {
 	MSpellsBook.writelock(__FUNCTION__, __LINE__);
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		if ((*itr)->type == SPELL_BOOK_TYPE_TRADESKILL)
-			ModifySpellStatus(*itr, -66);
+			RemoveSpellStatus(*itr, SPELL_STATUS_LOCK);
 	}
 
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
@@ -2140,7 +2140,7 @@ void Player::UnlockTSSpells() {
 	MSpellsBook.writelock(__FUNCTION__, __LINE__);
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		if ((*itr)->type == SPELL_BOOK_TYPE_TRADESKILL)
-			ModifySpellStatus(*itr, 66);
+			AddSpellStatus(*itr, SPELL_STATUS_LOCK);
 	}
 
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
@@ -2155,7 +2155,7 @@ void Player::QueueSpell(Spell* spell) {
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		spell2 = *itr;
 		if (spell2->spell_id == spell->GetSpellID())
-			ModifySpellStatus(spell2, 4, false);
+			AddSpellStatus(spell2, SPELL_STATUS_QUEUE, false);
 	}
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
 }
@@ -2167,7 +2167,7 @@ void Player::UnQueueSpell(Spell* spell) {
 	for (itr = spells.begin(); itr != spells.end(); itr++) {
 		spell2 = *itr;
 		if (spell2->spell_id == spell->GetSpellID())
-			ModifySpellStatus(spell2, -4, false);
+			RemoveSpellStatus(spell2, SPELL_STATUS_QUEUE, false);
 	}
 	MSpellsBook.releasewritelock(__FUNCTION__, __LINE__);
 }
@@ -2189,11 +2189,26 @@ void Player::ModifySpellStatus(SpellBookEntry* spell, sint16 value, bool modify_
 		spell->recast = recast;
 		spell->recast_available = Timer::GetCurrentTime2()	+ (recast * 100);
 	}
-
 	if (modify_recast || spell->recast_available <= Timer::GetCurrentTime2() || value == 4)
-		spell->status += value;
+		spell->status += value; // use set/remove spell status now
 }
+void Player::AddSpellStatus(SpellBookEntry* spell, sint16 value, bool modify_recast, int16 recast) {
+	if (modify_recast) {
+		spell->recast = recast;
+		spell->recast_available = Timer::GetCurrentTime2() + (recast * 100);
+	}
+	if (modify_recast || spell->recast_available <= Timer::GetCurrentTime2() || value == 4)
+		spell->status = spell->status | value;
+}
+void Player::RemoveSpellStatus(SpellBookEntry* spell, sint16 value, bool modify_recast, int16 recast) {
+	if (modify_recast) {
+		spell->recast = recast;
+		spell->recast_available = Timer::GetCurrentTime2() + (recast * 100);
+	}
+	if (modify_recast || spell->recast_available <= Timer::GetCurrentTime2() || value == 4)
+		spell->status = spell->status & ~value;
 
+}
 void Player::SetSpellStatus(Spell* spell, int8 status){
 	MSpellsBook.lock();
 	vector<SpellBookEntry*>::iterator itr;
@@ -2201,7 +2216,7 @@ void Player::SetSpellStatus(Spell* spell, int8 status){
 	for(itr = spells.begin(); itr != spells.end(); itr++){
 		spell2 = *itr;
 		if(spell2->spell_id == spell->GetSpellData()->id){
-			spell2->status = status;
+			spell2->status = spell2->status | status;
 			break;
 		}
 	}
@@ -3771,12 +3786,12 @@ vector<Quest*>* Player::CheckQuestsFailures(){
 	return quest_failures;
 }
 
-vector<Quest*>* Player::CheckQuestsKillUpdate(Spawn* spawn){
+vector<Quest*>* Player::CheckQuestsKillUpdate(Spawn* spawn, bool update){
 	vector<Quest*>* quest_updates = 0;
 	map<int32, Quest*>::iterator itr;
 	MPlayerQuests.lock();
 	for(itr = player_quests.begin(); itr != player_quests.end(); itr++){
-		if(itr->second && itr->second->CheckQuestKillUpdate(spawn)){
+		if(itr->second && itr->second->CheckQuestKillUpdate(spawn, update)){
 			if(!quest_updates)
 				quest_updates = new vector<Quest*>();
 			quest_updates->push_back(itr->second);
@@ -5187,13 +5202,15 @@ void Player::InitXPTable() {
 void Player::SendQuestRequiredSpawns(int32 quest_id){
 	bool locked = true;
 	m_playerSpawnQuestsRequired.readlock(__FUNCTION__, __LINE__);
-	if (player_spawn_quests_required.size() > 0) {
+	Quest* quest = GetQuest(quest_id);
+	if (player_spawn_quests_required.size() > 0 ) {
 		ZoneServer* zone = GetZone();
 		Client* client = zone->GetClientBySpawn(this);
 		if (!client){
 			m_playerSpawnQuestsRequired.releasereadlock(__FUNCTION__, __LINE__);
 			return;
 		}
+		int xxx = player_spawn_quests_required.count(quest_id);
 		if (player_spawn_quests_required.count(quest_id) > 0){
 			vector<int32> spawns = *player_spawn_quests_required[quest_id];
 			m_playerSpawnQuestsRequired.releasereadlock(__FUNCTION__, __LINE__);

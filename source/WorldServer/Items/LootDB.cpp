@@ -105,25 +105,42 @@ void WorldDatabase::LoadGlobalLoot(ZoneServer* zone) {
 			const char* type = result.GetStringStr("type");
 			int32 table_id = result.GetInt32Str("loot_table");
 			if (strcmp(type, "Level") == 0) {
-				int8 level = result.GetInt8Str("value1");
-				zone->AddLevelLootList(level, table_id);
-				LogWrite(LOOT__DEBUG, 5, "Loot", "---Loading Level %i loot table (id: %u)", level, table_id);
-			}
-			else if (strcmp(type, "Racial") == 0) {
-				int16 race_id = result.GetInt16Str("value1");
-				zone->AddRacialLootList(race_id, table_id);
-				LogWrite(LOOT__DEBUG, 5, "Loot", "---Loading Racial %i loot table (id: %u)", race_id, table_id);
-			}
-			else if (strcmp(type, "Zone") == 0) {
-				ZoneLoot* loot = new ZoneLoot();
-				int32 zoneID = result.GetInt32Str("value1");
-				loot->minLevel = result.GetInt8Str("value2");
-				loot->maxLevel = result.GetInt8Str("value3");
+				GlobalLoot* loot = new GlobalLoot();
+				loot->minLevel = result.GetInt8Str("value1");
+				loot->maxLevel = result.GetInt8Str("value2");
+				loot->table_id = table_id;
 
 				if (loot->minLevel > loot->maxLevel)
 					loot->maxLevel = loot->minLevel;
 
+				zone->AddLevelLootList(loot);
+				LogWrite(LOOT__DEBUG, 5, "Loot", "---Loading Level %i loot table (id: %u)", loot->minLevel, table_id);
+				LogWrite(LOOT__DEBUG, 5, "Loot", "---minlevel: %i, maxlevel: %i", loot->minLevel, loot->maxLevel);
+			}
+			else if (strcmp(type, "Racial") == 0) {
+				GlobalLoot* loot = new GlobalLoot();
+				int16 race_id = result.GetInt16Str("value1");
+				loot->minLevel = result.GetInt8Str("value2");
+				loot->maxLevel = result.GetInt8Str("value3");
 				loot->table_id = table_id;
+
+				if (loot->minLevel > loot->maxLevel)
+					loot->maxLevel = loot->minLevel;
+
+				zone->AddRacialLootList(race_id, loot);
+				LogWrite(LOOT__DEBUG, 5, "Loot", "---Loading Racial %i loot table (id: %u)", race_id, table_id);
+				LogWrite(LOOT__DEBUG, 5, "Loot", "---minlevel: %i, maxlevel: %i", loot->minLevel, loot->maxLevel);
+			}
+			else if (strcmp(type, "Zone") == 0) {
+				GlobalLoot* loot = new GlobalLoot();
+				int32 zoneID = result.GetInt32Str("value1");
+				loot->minLevel = result.GetInt8Str("value2");
+				loot->maxLevel = result.GetInt8Str("value3");
+				loot->table_id = table_id;
+
+				if (loot->minLevel > loot->maxLevel)
+					loot->maxLevel = loot->minLevel;
+				
 				zone->AddZoneLootList(zoneID, loot);
 				LogWrite(LOOT__DEBUG, 5, "Loot", "---Loading Zone %i loot table (id: %u)", zoneID, table_id);
 				LogWrite(LOOT__DEBUG, 5, "Loot", "---minlevel: %i, maxlevel: %i", loot->minLevel, loot->maxLevel);
