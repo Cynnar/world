@@ -7704,7 +7704,7 @@ void Client::SendResurrectionWindow() {
 	if(!packet)
 		return;
 
-	char* tmp = new char[60];
+	char* tmp = new char[512];
 	sprintf(tmp, "%s would like to cast '%s' on you. Do you accept?", caster->GetName(), current_rez.spell_name.c_str());
 
 	packet->setMediumStringByName("text", tmp);
