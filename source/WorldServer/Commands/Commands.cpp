@@ -5875,9 +5875,9 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 
 	// need at least 2 args for a valid command
 
-	if( sep && sep->arg[1] )
+	if (sep && sep->arg[1])
 	{
-		
+
 		if (strcmp(sep->arg[0], "list") == 0)
 		{
 			map<int32, Quest*>* quests = player->GetPlayerQuests();
@@ -5887,13 +5887,13 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 				client->Message(CHANNEL_COLOR_YELLOW, "%s has no quests.", client->GetPlayer()->GetName());
 			else
 			{
-				for( itr = quests->begin(); itr != quests->end(); itr++ )
+				for (itr = quests->begin(); itr != quests->end(); itr++)
 				{
 					Quest* quest = itr->second;
 					client->Message(CHANNEL_COLOR_YELLOW, "%u) %s", itr->first, quest->GetName());
 				}
 			}
-		
+
 		}
 
 		else if (strcmp(sep->arg[0], "completed") == 0)
@@ -5906,13 +5906,13 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 				client->Message(CHANNEL_COLOR_YELLOW, "%s has no completed quests.", client->GetPlayer()->GetName());
 			else
 			{
-				for( itr = quests->begin(); itr != quests->end(); itr++ )
+				for (itr = quests->begin(); itr != quests->end(); itr++)
 				{
-				Quest* quest = itr->second;
-				client->Message(CHANNEL_COLOR_YELLOW, "%u) %s", itr->first, quest->GetName());
+					Quest* quest = itr->second;
+					client->Message(CHANNEL_COLOR_YELLOW, "%u) %s", itr->first, quest->GetName());
 				}
 			}
-		
+
 		}
 		// Add in a progress step, and a LogWrite() for tracking GM Commands.
 		// LogWrite(LUA__DEBUG, 0, "LUA", "Quest: %s, function: %s", quest->GetName(), function);
@@ -5938,12 +5938,54 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 							client->Message(CHANNEL_COLOR_YELLOW, "You have removed the quest %s from %s's journal", quest->GetName(), player->GetName());
 							client->GetCurrentZone()->GetClientBySpawn(player)->Message(CHANNEL_COLOR_YELLOW, "%s has removed the quest %s from your journal", client->GetPlayer()->GetName(), quest->GetName());
 						}
-						LogWrite(COMMAND__INFO, 0, "GM Command", "%s removed the quest %s from %s", client->GetPlayer()->GetName(), quest->GetName(), player->GetName());
-						lua_interface->CallQuestFunction(quest, "Deleted", client->GetPlayer());
+					LogWrite(COMMAND__INFO, 0, "GM Command", "%s removed the quest %s from %s", client->GetPlayer()->GetName(), quest->GetName(), player->GetName());
+					lua_interface->CallQuestFunction(quest, "Deleted", client->GetPlayer());
 				}
 				client->RemovePlayerQuest(quest_id);
 				client->GetCurrentZone()->SendQuestUpdates(client);
-			}	
+			}
+		}
+
+		else if (strcmp(sep->arg[0], "advance") == 0)
+		{
+			int32 quest_id = 0;
+			int32 step = 0;
+
+			if (sep && sep->arg[1] && sep->IsNumber(1))
+			{
+				quest_id = atoul(sep->arg[1]);
+				Quest* quest = client->GetPlayer()->player_quests[quest_id];
+
+				if (sep && sep->arg[2] && sep->IsNumber(1))
+				{
+					step = atoul(sep->arg[2]);
+
+					if (quest_id > 0 && step > 0)
+					{
+						if (player && player->IsPlayer() && quest_id > 0 && step > 0 && (player->player_quests.count(quest_id) > 0))
+						{
+							if (client)
+							{
+								client->AddPendingQuestUpdate(quest_id, step);
+								client->Message(CHANNEL_COLOR_YELLOW, "The quest %s has been advanced one step.", quest->GetName());
+								LogWrite(COMMAND__INFO, 0, "GM Command", "%s advanced the quest %s one step", client->GetPlayer()->GetName(), quest->GetName());
+							}
+						}
+					}
+					else
+					{
+						client->Message(CHANNEL_COLOR_RED, "Quest ID and Step Number must be greater than 0!");
+					}
+				}
+				else
+				{
+					client->Message(CHANNEL_COLOR_RED, "Step Number must be a number!");
+				}
+			}
+			else
+			{
+				client->Message(CHANNEL_COLOR_RED, "Quest ID must be a number!");
+			}
 		}
 
 		else
@@ -5954,12 +5996,13 @@ void Commands::Command_ModifyQuest(Client* client, Seperator* sep)
 
 	else
 	{
-		client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify quest [action] [quest id]");
-		client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: list, completed, remove");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Usage: /modify quest [action] [quest id] [step number]");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Actions: list, completed, remove, advance");
 		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest list");
 		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest remove 156");
+		client->SimpleMessage(CHANNEL_COLOR_RED, "Example: /modify quest advance 50 1");
 	}
-		
+
 }
 
 

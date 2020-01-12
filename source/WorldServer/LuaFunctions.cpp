@@ -9024,4 +9024,6 @@ int EQ2Emu_lua_Evac(lua_State* state) {
 		}
 		spell->MSpellTargets.releasereadlock(__FUNCTION__, __LINE__);
 	}
+
+	return 0;
 }
