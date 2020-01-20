@@ -1157,7 +1157,9 @@ int EQ2Emu_lua_SpellDamage(lua_State* state){
 	if(!lua_interface)
 		return 0;
 	Spawn* target = lua_interface->GetSpawn(state);
-	int32 target_id = target->GetID();
+	int32 target_id = 0;
+	if (target)
+		target_id = target->GetID();
 	LuaSpell* luaspell = lua_interface->GetCurrentSpell(state);
 	if(!luaspell)
 		return 0;
@@ -1623,7 +1625,7 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 				if (target) {
 					if (target->IsPlayer()) {
 						((Player*)target)->AddSpellBonus(luaspell, type, value, class_req, race_req, faction_req);
-						LogWrite(LUA__ERROR, 0, "LUA", "Applying Spell Bonus to Player  '%s'.  Is a Group Member.", ((Player*)target)->GetName());
+						LogWrite(LUA__DEBUG, 0, "LUA", "Applying Spell Bonus to Player  '%s'.  Is a Group Member.", ((Player*)target)->GetName());
 						if (((Player*)target)->GetGroupMemberInfo())
 							((Player*)target)->UpdateGroupMemberInfo();
 						((Player*)target)->SetCharSheetChanged(true);
@@ -1640,7 +1642,7 @@ int EQ2Emu_lua_AddSpellBonus(lua_State* state){
 		}
 		else if (spawn && spawn->IsEntity()) {
 			((Entity*)spawn)->AddSpellBonus(luaspell, type, value, class_req, race_req, faction_req);
-			LogWrite(LUA__ERROR, 0, "LUA", "Applying Spell Bonus to Entity  '%s'.  Is a Group Member.", ((Entity*)spawn)->GetName());
+			LogWrite(LUA__DEBUG, 0, "LUA", "Applying Spell Bonus to Entity  '%s'.  Is a Group Member.", ((Entity*)spawn)->GetName());
 			if(spawn->IsPlayer())
 				((Player*)spawn)->SetCharSheetChanged(true);
 		}

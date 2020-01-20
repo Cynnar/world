@@ -1367,10 +1367,12 @@ lua_State* LuaInterface::GetItemScript(const char* name, bool create_new, bool u
 	map<lua_State*, bool>::iterator item_script_itr;
 	lua_State* ret = 0;
 	Mutex* mutex = 0;
-	if(item_scripts.count(name) > 0){
+
+	itr = item_scripts.find(name);
+	if(itr != item_scripts.end()) {
 		mutex = GetItemScriptMutex(name);
 		mutex->readlock(__FUNCTION__, __LINE__);
-		for(item_script_itr = item_scripts[name].begin(); item_script_itr != item_scripts[name].end(); item_script_itr++){
+		for(item_script_itr = itr->second.begin(); item_script_itr != itr->second.end(); item_script_itr++){
 			if(!item_script_itr->second){ //not in use
 				if(use)
 					item_script_itr->second = true;
@@ -1397,10 +1399,12 @@ lua_State* LuaInterface::GetSpawnScript(const char* name, bool create_new, bool 
 	map<lua_State*, bool>::iterator spawn_script_itr;
 	lua_State* ret = 0;
 	Mutex* mutex = 0;
-	if(spawn_scripts.count(string(name)) > 0){
+
+	itr = spawn_scripts.find(name);
+	if(itr != spawn_scripts.end()) {
 		mutex = GetSpawnScriptMutex(name);
 		mutex->readlock(__FUNCTION__, __LINE__);
-		for(spawn_script_itr = spawn_scripts[name].begin(); spawn_script_itr != spawn_scripts[name].end(); spawn_script_itr++){
+		for(spawn_script_itr = itr->second.begin(); spawn_script_itr != itr->second.end(); spawn_script_itr++){
 			if(!spawn_script_itr->second){ //not in use
 				if(use)
 					spawn_script_itr->second = true;
@@ -1425,10 +1429,12 @@ lua_State* LuaInterface::GetZoneScript(const char* name, bool create_new, bool u
 	map<lua_State*, bool>::iterator zone_script_itr;
 	lua_State* ret = 0;
 	Mutex* mutex = 0;
-	if(zone_scripts.count(name) > 0){
+
+	itr = zone_scripts.find(name);
+	if(itr != zone_scripts.end()) {
 		mutex = GetZoneScriptMutex(name);
 		mutex->readlock(__FUNCTION__, __LINE__);
-		for(zone_script_itr = zone_scripts[name].begin(); zone_script_itr != zone_scripts[name].end(); zone_script_itr++){
+		for(zone_script_itr = itr->second.begin(); zone_script_itr != itr->second.end(); zone_script_itr++){
 			if(!zone_script_itr->second){ //not in use
 				if(use)
 					zone_script_itr->second = true;

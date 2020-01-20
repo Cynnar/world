@@ -1315,7 +1315,7 @@ void Commands::Process(int32 index, EQ2_16BitString* command_parms, Client* clie
 				int32 item_index = atoul(sep->arg[0]);
 				Item* item = player->item_list.GetItemFromIndex(item_index);
 				if (item && item->GetItemScript()) {
-					if (item->generic_info.max_charges == 0)
+					if (item->generic_info.max_charges == 0 || item->generic_info.max_charges == 0xFFFF)
 						lua_interface->RunItemScript(item->GetItemScript(), "used", item, player);
 					else {
 						if (item->generic_info.display_charges > 0) {
